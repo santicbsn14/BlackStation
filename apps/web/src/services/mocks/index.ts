@@ -4,9 +4,11 @@ import {
   TELEFONO_REGEX,
   calcularSubtotal,
   calcularTotal,
+  getJornada,
   type CatalogResponse,
   type CreateOrderRequest,
   type CreateOrderResponse,
+  type FranjaPosible,
   type LoginRequest,
   type LoginResponse,
   type Order,
@@ -16,9 +18,37 @@ import {
   type PublicSettings,
   type SlotsResponse,
 } from '@blackstation/shared';
-import { getJornada, isForceOpen, type FranjaPosible } from './jornada';
 import { latency, mockError, newCodigo, newObjectId } from './mockUtils';
 import { getDb, saveDb, type MockDb } from './store';
+
+/** `VITE_MOCK_FORCE_OPEN=true`: ignora `horarios` y genera franjas desde ahora. */
+function isForceOpen(): boolean {
+  return import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
+}
+
+/**
+ * Reemplazo del job de vencimiento (§5.4) mientras no hay API: se aplica al leer.
+ * Todo pedido `pendiente` con `expiresAt ≤ ahora` pasa a `cancelado`/`vencido` y libera su cupo.
+ */
+function vencerPendientes(db: MockDb, ahora: Date): void {
+  const ahoraIso = ahora.toISOString();
+  let cambio = false;
+  for (const order of db.orders) {
+    if (order.estado !== 'pendiente' || !order.expiresAt) continue;
+    if (Date.parse(order.expiresAt) > ahora.getTime()) continue;
+    order.estado = 'cancelado';
+    order.motivoCancelacion = 'vencido';
+    order.canceladoAt = ahoraIso;
+    order.updatedAt = ahoraIso;
+    const slot = db.pickupSlots.find((s) => s._id === order.slotId);
+    if (slot) {
+      slot.ocupados = Math.max(0, slot.ocupados - 1);
+      slot.updatedAt = ahoraIso;
+    }
+    cambio = true;
+  }
+  if (cambio) saveDb();
+}
 
 // Misma firma que services/api. Devuelven exactamente el JSON de la API (MODELO_DATOS §6–7).
 
@@ -86,6 +116,7 @@ export async function getSlots(): Promise<SlotsResponse> {
   await latency();
   const db = getDb();
   const ahora = new Date();
+  vencerPendientes(db, ahora);
   const jornada = getJornada(db.settings, ahora, isForceOpen());
   const abierto = db.settings.pedidosHabilitados && jornada.activa && jornada.abierta;
   if (!abierto) return { fecha: jornada.fecha, abierto, slots: [] };
@@ -216,7 +247,14 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     );
   }
 
-  // 2. Reputación del customer: se implementa con la Etapa 06.
+  // 2. Estado del customer. El upsert y los contadores quedan para las Etapas 04/06.
+  const customer = db.customers.find((c) => c.telefono === request.cliente.telefono);
+  if (customer?.estado === 'bloqueado') {
+    throw mockError('CUSTOMER_BLOCKED', 'No podemos tomar tu pedido online.');
+  }
+  if (customer?.estado === 'requiereTransferencia' && request.metodoPago !== 'transferencia') {
+    throw mockError('TRANSFER_REQUIRED', 'Para este número el pago es por transferencia.');
+  }
 
   // 3. Ítems.
   const items = armarItems(db, request.items);
@@ -296,7 +334,9 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
 
 export async function getOrderByCodigo(codigo: string): Promise<PublicOrder> {
   await latency();
-  const order = getDb().orders.find((o) => o.codigo === codigo);
+  const db = getDb();
+  vencerPendientes(db, new Date());
+  const order = db.orders.find((o) => o.codigo === codigo);
   if (!order) throw mockError('ORDER_NOT_FOUND', 'No encontramos ese pedido.');
 
   return structuredClone({

@@ -30,3 +30,10 @@ export function puedeTransicionar(
     (t) => t.desde === desde && t.hacia === hacia && t.motivo === motivo && t.actor === actor,
   );
 }
+
+/** Estados sin transiciones de salida (MODELO_DATOS §4). */
+export const ESTADOS_FINALES: readonly EstadoPedido[] = ['entregado', 'cancelado'];
+
+export function esEstadoFinal(estado: EstadoPedido): boolean {
+  return ESTADOS_FINALES.includes(estado);
+}

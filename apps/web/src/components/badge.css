@@ -1,0 +1,35 @@
+@layer components {
+  /* Estados de pedido: siempre color + texto. Fondo al 15%, texto y borde del color pleno. */
+  .badge {
+    --badge-color: var(--text-muted);
+
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+    background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+    border: 1px solid var(--badge-color);
+    border-radius: var(--radius-full);
+    color: var(--badge-color);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+    text-transform: uppercase;
+    white-space: nowrap;
+
+    &[data-estado='pendiente'] {
+      --badge-color: var(--estado-pendiente);
+    }
+
+    &[data-estado='confirmado'] {
+      --badge-color: var(--estado-confirmado);
+    }
+
+    &[data-estado='entregado'] {
+      --badge-color: var(--estado-entregado);
+    }
+
+    &[data-estado='cancelado'] {
+      --badge-color: var(--estado-cancelado);
+    }
+  }
+}

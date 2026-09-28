@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACTORES_TRANSICION, ESTADOS_PEDIDO, MOTIVOS_CANCELACION } from './enums';
-import { TRANSICIONES, puedeTransicionar } from './transitions';
+import { TRANSICIONES, esEstadoFinal, puedeTransicionar } from './transitions';
 
 describe('puedeTransicionar', () => {
   it('acepta las transiciones del panel', () => {
@@ -50,5 +50,17 @@ describe('puedeTransicionar', () => {
 
   it('la tabla tiene exactamente las 6 transiciones de MODELO_DATOS §4', () => {
     expect(TRANSICIONES).toHaveLength(6);
+  });
+});
+
+describe('esEstadoFinal', () => {
+  it('entregado y cancelado son finales; el resto no', () => {
+    expect(ESTADOS_PEDIDO.filter(esEstadoFinal)).toEqual(['entregado', 'cancelado']);
+  });
+
+  it('un estado final no tiene transiciones de salida', () => {
+    for (const estado of ESTADOS_PEDIDO.filter(esEstadoFinal)) {
+      expect(TRANSICIONES.some((t) => t.desde === estado)).toBe(false);
+    }
   });
 });

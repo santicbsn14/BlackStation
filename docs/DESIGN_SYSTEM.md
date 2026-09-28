@@ -29,7 +29,8 @@ Orden de capas (primera línea de `index.css`):
 ```
 
 - La cascada la resuelve la capa, no la especificidad. No se usa `!important`.
-- `index.css` se importa una sola vez en `main.tsx`.
+- `index.css` se importa una sola vez en `main.tsx`, **como primer import**: el orden de `@layer` lo fija
+  la primera aparición, y si el CSS de un componente llega antes su capa queda por debajo de `base`.
 - El CSS de cada componente se importa desde su `.tsx`. El de `features/admin` viaja en el chunk
   lazy de `/admin`: la app pública nunca lo descarga.
 

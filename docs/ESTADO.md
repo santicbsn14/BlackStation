@@ -8,7 +8,7 @@
 | 01 | Modelo de datos, estados, reglas de negocio y endpoints | ✅ Cerrada |
 | 02 | Setup del monorepo: `shared`, design system base, routing, servicios y mocks | ✅ Cerrada |
 | 02b | Ajustes post-revisión: códigos de error, `abierto` en slots, listas admin envueltas | ✅ Cerrada |
-| 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | Pendiente |
+| 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | 🟡 Implementada, falta deploy Demo 1 |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | Pendiente |
 | 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | Pendiente |
 | 06 | Reglas de reputación de clientes | Pendiente |
@@ -22,6 +22,51 @@
 - [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) — arquitectura CSS, tokens y reglas de estilos.
 
 ## Registro de cambios
+
+### 2026-09-28 — Etapa 03: app pública
+- Componentes base en `components/`, cada uno con su CSS en `@layer components`: `Button` (`.btn`),
+  `Field` / `Input` / `Textarea`, `Chip`, `Stepper`, `Card`, `Drawer` (`bottom`: sheet en mobile y
+  modal en md; `right`), `Badge`, `Countdown`, `Toast` (`ToastProvider` + `useToast`), `Skeleton`,
+  más `Icon`. Hooks genéricos `useAhora` y `useCountdown`. `lib/`: `waLink`, `renderPlantilla` +
+  `mensajeComprobante`, y helpers de `localStorage`.
+- `features/public` reorganizado en `catalogo/`, `carrito/`, `checkout/` y `pedido/`. Los hooks que
+  usan varias sub-features quedan en `features/public/hooks`.
+- Catálogo, detalle de producto (`?producto=<id>`, `&linea=<n>` en edición), carrito (Context +
+  `useReducer`, fusión de líneas, revalidación contra el catálogo), checkout con la tabla de errores
+  por `code` y seguimiento con polling, countdown y `wa.me`. Keys nuevas `bs-cliente` y
+  `bs-pedido-activo`, documentadas en `CLAUDE.md`.
+- `@blackstation/shared`: la lógica de jornada del mock pasa a `utils/jornada.ts` (`getJornada`, más
+  `getProximaApertura` para el header), con `ahora` como parámetro. `ESTADOS_FINALES` +
+  `esEstadoFinal`. 55 tests (+12).
+- Mocks: fixture de `customers` (`5493361111111` bloqueado, `5493362222222` requiere
+  transferencia), store en versión 2. `POST /orders` valida el paso 2 de §5.3 (403
+  `CUSTOMER_BLOCKED` / `TRANSFER_REQUIRED`). `GET /orders/:codigo` y `GET /slots` vencen los
+  `pendiente` con `expiresAt ≤ now` y liberan el cupo. `orderKeys.detail` pasa a `orderKeys.public`.
+- Probado con Chrome headless a 375 px: pedido completo, fusión y edición, el botón atrás cierra el
+  sheet, persistencia tras recargar, un agotado bloquea "Continuar", 409 inline, bloqueado,
+  transferencia forzada, cerrado con `VITE_MOCK_FORCE_OPEN=false`, vencimiento con cupo liberado,
+  banner de pedido en curso y texto de `wa.me`. Sin errores de consola.
+
+**Desvíos y decisiones**
+- **Deploy en Vercel pendiente:** no se hizo desde esta sesión, así que falta la URL de la Demo 1.
+- **Bug corregido en `main.tsx`:** `styles/index.css` se importaba después del router, así que
+  `@layer components` quedaba declarada antes que `reset`/`base` y perdía contra ellas (los `<a>`
+  con `.btn` salían naranja sobre naranja). Ahora es el primer import; se agregó a
+  `DESIGN_SYSTEM.md` §1.
+- Header con isotipo + "BLACK STATION" en texto, como pide el brief. `DESIGN_SYSTEM.md` §10 dice que
+  el logo no se recrea con texto: se interpretó que eso aplica al logo completo en arco, no a este
+  rótulo. Confirmar.
+- Tocar la card (no solo el "+") también abre el detalle.
+- Los toasts van arriba de la pantalla: abajo tapaban los CTA de los footers sticky.
+- Al revalidar, un extra que se ajusta a `cantidadMax` no genera nota (el brief solo pide nota al
+  sacar). Si el catálogo anterior no está en memoria (página recién cargada), la nota dice "un extra"
+  porque el carrito no guarda nombres.
+- La edición de línea va por índice (`&linea=<n>`): si la URL quedó vieja después de cambiar el
+  carrito, el sheet abre en modo agregar. Si `?producto=` apunta a un producto agotado o inexistente,
+  el sheet no se abre.
+- En el mock, el paso 2 (customer) se chequea antes de validar el formato del teléfono (paso 4),
+  siguiendo el orden de §5.3.
+- `playwright-core` se usó solo desde un directorio temporal para las pruebas; no se agregó al repo.
 
 ### 2026-09-28 — Etapa 02b cerrada
 - `@blackstation/shared`: `errors.ts` con `ERROR_CODES` + `ErrorCode` (tabla de §10),

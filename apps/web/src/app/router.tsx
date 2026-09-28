@@ -1,8 +1,8 @@
 import { createBrowserRouter } from 'react-router';
-import { CatalogoPage } from '../features/public/pages/CatalogoPage';
-import { CheckoutPage } from '../features/public/pages/CheckoutPage';
+import { CatalogoPage } from '../features/public/catalogo/pages/CatalogoPage';
+import { CheckoutPage } from '../features/public/checkout/pages/CheckoutPage';
 import { NotFoundPage } from '../features/public/pages/NotFoundPage';
-import { PedidoPage } from '../features/public/pages/PedidoPage';
+import { PedidoPage } from '../features/public/pedido/pages/PedidoPage';
 import { PublicLayout } from './layouts/PublicLayout';
 import { RequireAuth } from './RequireAuth';
 

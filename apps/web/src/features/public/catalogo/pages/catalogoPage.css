@@ -1,0 +1,71 @@
+@layer features {
+  .pub-catalogo {
+    /* Alto de la barra de chips sticky: el scroll a una sección la deja debajo. */
+    --pub-chips-h: calc(var(--tap-min) + var(--space-2) * 2);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .pub-catalogo__avisos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .pub-catalogo__mensaje {
+    align-items: center;
+    padding-block: var(--space-7);
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* Chips sticky a sangre en mobile, con scroll horizontal. */
+  .pub-catalogo__chips {
+    position: sticky;
+    top: var(--pub-header-h);
+    z-index: var(--z-header);
+    display: flex;
+    gap: var(--space-2);
+    height: var(--pub-chips-h);
+    margin-inline: calc(var(--space-4) * -1);
+    padding: var(--space-2) var(--space-4);
+    overflow-x: auto;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+
+    @media (min-width: 768px) {
+      margin-inline: 0;
+      padding-inline: 0;
+    }
+  }
+
+  .pub-catalogo__seccion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    scroll-margin-top: calc(var(--pub-header-h) + var(--pub-chips-h) + var(--space-4));
+  }
+
+  .pub-catalogo__grid {
+    display: grid;
+    gap: var(--space-3);
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+  }
+
+  .pub-catalogo__skeleton-titulo {
+    width: 40%;
+    height: var(--fs-2xl);
+  }
+
+  .pub-catalogo__skeleton-fila {
+    height: calc(var(--tap-min) * 2 + var(--space-4) * 2);
+    border-radius: var(--radius-lg);
+  }
+}

@@ -1,11 +1,14 @@
+// Primero de todo: declara el orden de @layer antes que cualquier CSS de componente.
+// Si otro CSS llega antes, su capa queda primera y pierde contra reset/base.
+import './styles/index.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
 import { router } from './app/router';
+import { ToastProvider } from './components/Toast';
 import { ApiError } from './services';
 import { setUnauthorizedHandler } from './services/http';
-import './styles/index.css';
 
 const MAX_REINTENTOS = 2;
 
@@ -31,7 +34,9 @@ if (!root) throw new Error('Falta #root en index.html');
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

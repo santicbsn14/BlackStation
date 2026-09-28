@@ -1,0 +1,37 @@
+@layer components {
+  .chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap-min);
+    padding-inline: var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease);
+
+    &:hover:not(:disabled) {
+      border-color: var(--text-muted);
+    }
+
+    &.is-active,
+    &[aria-pressed='true'] {
+      background: var(--color-orange-soft);
+      border-color: var(--accent);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+}

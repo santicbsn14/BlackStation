@@ -15,6 +15,7 @@ export const settingsKeys = {
 
 export const orderKeys = {
   all: ['orders'] as const,
-  detail: (codigo: string) => [...orderKeys.all, 'detail', codigo] as const,
+  /** Seguimiento público por `codigo`. */
+  public: (codigo: string) => [...orderKeys.all, 'public', codigo] as const,
   list: (fecha: string) => [...orderKeys.all, 'list', fecha] as const,
 };

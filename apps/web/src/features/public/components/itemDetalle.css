@@ -1,0 +1,11 @@
+@layer features {
+  .pub-item-detalle {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-tight);
+
+    & > * + * {
+      margin-top: var(--space-1);
+    }
+  }
+}

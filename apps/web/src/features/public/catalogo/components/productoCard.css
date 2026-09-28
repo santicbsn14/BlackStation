@@ -1,0 +1,126 @@
+@layer features {
+  /* Card en formato fila: texto a la izquierda, miniatura con "+" a la derecha. */
+  .pub-producto-card {
+    position: relative;
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+
+    &:has(.pub-producto-card__abrir:hover) {
+      border-color: var(--border-strong);
+    }
+
+    &[data-agotado] {
+      opacity: 0.55;
+    }
+  }
+
+  .pub-producto-card__texto {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .pub-producto-card__nombre {
+    font-size: var(--fs-lg);
+    font-variation-settings: normal;
+    text-transform: none;
+  }
+
+  /* Toda la card abre el detalle: el botón se estira sobre ella. */
+  .pub-producto-card__abrir {
+    padding: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    text-align: start;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-lg);
+    }
+
+    &:focus-visible {
+      outline: none;
+    }
+
+    &:focus-visible::after {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .pub-producto-card__descripcion {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-tight);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .pub-producto-card__precio {
+    margin-top: auto;
+    padding-top: var(--space-1);
+    font-weight: var(--fw-semibold);
+  }
+
+  /* No intercepta taps: la miniatura también abre el detalle (salvo el "+"). */
+  .pub-producto-card__media {
+    position: relative;
+    pointer-events: none;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  .pub-producto-card__foto {
+    width: calc(var(--space-8) + var(--space-5));
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+  }
+
+  .pub-producto-card__foto--vacia {
+    display: grid;
+    place-items: center;
+    background: var(--surface-2);
+
+    & img {
+      width: 60%;
+      opacity: 0.15;
+    }
+  }
+
+  /* Encima del botón estirado (va después en el DOM y también está posicionado). */
+  .pub-producto-card__sumar {
+    position: absolute;
+    right: calc(var(--space-2) * -1);
+    bottom: calc(var(--space-2) * -1);
+    display: inline-grid;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    background: var(--accent);
+    border: 1px solid var(--surface-1);
+    border-radius: var(--radius-full);
+    color: var(--text-on-accent);
+    font-size: var(--fs-lg);
+    pointer-events: auto;
+
+    &:hover {
+      background: var(--color-orange-hover);
+    }
+  }
+
+  .pub-producto-card__agotado {
+    position: absolute;
+    right: var(--space-1);
+    bottom: var(--space-1);
+  }
+}

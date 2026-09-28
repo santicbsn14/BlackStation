@@ -153,6 +153,10 @@ Flujo obligatorio: **componente → hook de la feature → TanStack Query → se
   `productoId`, `cantidad`, `quitados`, `extras[{ extraId, cantidad }]`. Precio y disponibilidad
   se recalculan siempre contra el catálogo.
 - Token admin: `localStorage` (`bs-token`) + `expiresAt`.
+- Cliente del checkout: `localStorage` (`bs-cliente`) con `{ nombre, caracteristica, numero }`, para
+  precargar el formulario.
+- Pedido en curso: `localStorage` (`bs-pedido-activo`) con `{ codigo }`. Se borra cuando el pedido llega a
+  un estado final (o ya no existe).
 
 ### Variables de entorno
 
@@ -171,7 +175,7 @@ packages/shared/src/
 ├── transitions.ts    ← tabla de transiciones + puedeTransicionar()
 ├── constants.ts      ← ZONA_HORARIA, ACLARACION_MAX, etc.
 ├── types/            ← common, catalog, orders, slots, customers, settings, auth
-└── utils/            ← telefono, precio, pedido (+ tests *.test.ts)
+└── utils/            ← telefono, precio, pedido, jornada (+ tests *.test.ts)
 ```
 
 - Los tipos son el **JSON de la API**, no el documento de Mongo.

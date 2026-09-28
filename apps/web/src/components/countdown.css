@@ -1,0 +1,10 @@
+@layer components {
+  .countdown {
+    font-weight: var(--fw-bold);
+    font-variation-settings: 'wdth' var(--wdth-condensed);
+
+    &.is-urgent {
+      color: var(--danger);
+    }
+  }
+}

@@ -1,9 +1,11 @@
-import { ZONA_HORARIA, type Horario, type Settings } from '@blackstation/shared';
+import { ZONA_HORARIA } from '../constants';
+import type { Horario } from '../types/settings';
 
-// Lógica de jornada y franjas (MODELO_DATOS §5.1 y §5.2), calculada en la zona de negocio.
+// Jornada, franjas y próxima apertura (MODELO_DATOS §5.1 y §5.2), en la zona de negocio.
+// Funciones puras: el instante actual siempre llega por parámetro.
 
 const MIN_POR_DIA = 24 * 60;
-const HORAS_FORCE_OPEN = 3;
+const HORAS_FORZADO = 3;
 
 const formatoLocal = new Intl.DateTimeFormat('en-CA', {
   timeZone: ZONA_HORARIA,
@@ -63,6 +65,14 @@ function instanteLocal(fecha: string, minutos: number): Date {
   return new Date(supuesto - offset);
 }
 
+/** `abre` y `cierra` en minutos desde las 00:00 de la jornada (`cierra` > 24 h si cruza medianoche). */
+function rangoDelHorario(horario: Horario): { abre: number; cierra: number } {
+  const abre = aMinutos(horario.abre);
+  let cierra = aMinutos(horario.cierra);
+  if (cierra < abre) cierra += MIN_POR_DIA;
+  return { abre, cierra };
+}
+
 export type FranjaPosible = {
   hora: string;
   inicio: Date;
@@ -77,13 +87,10 @@ export type Jornada = {
   franjas: FranjaPosible[];
 };
 
-/** `abre` y `cierra` en minutos desde las 00:00 de la jornada (`cierra` > 24 h si cruza medianoche). */
-function rangoDelHorario(horario: Horario): { abre: number; cierra: number } {
-  const abre = aMinutos(horario.abre);
-  let cierra = aMinutos(horario.cierra);
-  if (cierra < abre) cierra += MIN_POR_DIA;
-  return { abre, cierra };
-}
+export type ConfigJornada = {
+  horarios: Horario[];
+  intervaloMin: number;
+};
 
 function franjasDelHorario(fecha: string, horario: Horario, intervaloMin: number): FranjaPosible[] {
   const { abre, cierra } = rangoDelHorario(horario);
@@ -96,15 +103,16 @@ function franjasDelHorario(fecha: string, horario: Horario, intervaloMin: number
 
 /**
  * Jornada actual y todas sus franjas posibles.
- * `forceOpen` ignora `horarios` y genera franjas alineadas a `intervaloMin` desde ahora hasta +3 h.
+ * `forzarAbierto` (solo para desarrollar con mocks) ignora `horarios` y genera franjas alineadas a
+ * `intervaloMin` desde `ahora` hasta +3 h.
  */
-export function getJornada(settings: Settings, ahora: Date, forceOpen: boolean): Jornada {
+export function getJornada(config: ConfigJornada, ahora: Date, forzarAbierto = false): Jornada {
   const local = partesLocales(ahora);
-  const { intervaloMin } = settings;
+  const { intervaloMin } = config;
 
-  if (forceOpen) {
+  if (forzarAbierto) {
     const desde = Math.ceil(local.minutos / intervaloMin) * intervaloMin;
-    const hasta = local.minutos + HORAS_FORCE_OPEN * 60;
+    const hasta = local.minutos + HORAS_FORZADO * 60;
     const franjas: FranjaPosible[] = [];
     for (let min = desde; min <= hasta; min += intervaloMin) {
       franjas.push({ hora: aHora(min), inicio: instanteLocal(local.fecha, min) });
@@ -112,7 +120,7 @@ export function getJornada(settings: Settings, ahora: Date, forceOpen: boolean):
     return { fecha: local.fecha, activa: true, abierta: true, franjas };
   }
 
-  const horarioDe = (dia: number) => settings.horarios.find((h) => h.dia === dia);
+  const horarioDe = (dia: number) => config.horarios.find((h) => h.dia === dia);
 
   // Madrugada de una jornada que cruzó la medianoche: ya pasó `abre` y todavía no llegó `cierra`.
   const ayer = horarioDe((local.dia + 6) % 7);
@@ -137,6 +145,26 @@ export function getJornada(settings: Settings, ahora: Date, forceOpen: boolean):
   };
 }
 
-export function isForceOpen(): boolean {
-  return import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
+export type ProximaApertura = {
+  /** 0 = domingo … 6 = sábado. */
+  dia: number;
+  hora: string;
+  /** `true` si abre hoy (día calendario local de `ahora`). */
+  esHoy: boolean;
+};
+
+/**
+ * Próximo `abre` estrictamente posterior a `ahora`, buscando hasta una semana adelante.
+ * `null` si no hay ningún día activo.
+ */
+export function getProximaApertura(horarios: Horario[], ahora: Date): ProximaApertura | null {
+  const local = partesLocales(ahora);
+  for (let offset = 0; offset <= 7; offset++) {
+    const dia = (local.dia + offset) % 7;
+    const horario = horarios.find((h) => h.dia === dia);
+    if (!horario?.activo) continue;
+    if (offset === 0 && aMinutos(horario.abre) <= local.minutos) continue;
+    return { dia, hora: horario.abre, esHoy: offset === 0 };
+  }
+  return null;
 }

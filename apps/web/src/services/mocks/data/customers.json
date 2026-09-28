@@ -1,0 +1,28 @@
+[
+  {
+    "_id": "66f1e1000000000000000001",
+    "telefono": "5493361111111",
+    "nombre": "Cliente bloqueado",
+    "pedidosTotal": 4,
+    "entregados": 1,
+    "noShows": 3,
+    "estado": "bloqueado",
+    "estadoManual": true,
+    "ultimoPedidoAt": "2026-09-10T23:30:00.000Z",
+    "createdAt": "2026-08-01T12:00:00.000Z",
+    "updatedAt": "2026-09-10T23:30:00.000Z"
+  },
+  {
+    "_id": "66f1e1000000000000000002",
+    "telefono": "5493362222222",
+    "nombre": "Cliente con transferencia",
+    "pedidosTotal": 3,
+    "entregados": 2,
+    "noShows": 1,
+    "estado": "requiereTransferencia",
+    "estadoManual": true,
+    "ultimoPedidoAt": "2026-09-12T23:30:00.000Z",
+    "createdAt": "2026-08-01T12:00:00.000Z",
+    "updatedAt": "2026-09-12T23:30:00.000Z"
+  }
+]

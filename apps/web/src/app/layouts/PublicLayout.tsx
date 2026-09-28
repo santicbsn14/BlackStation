@@ -1,22 +1,22 @@
-import { Link, Outlet } from 'react-router';
-import isotipoUrl from '../../assets/brand/isotipo.svg';
-import logoUrl from '../../assets/brand/logo.svg';
+import { Outlet } from 'react-router';
+import { CartDrawer } from '../../features/public/carrito/components/CartDrawer';
+import { CartProvider } from '../../features/public/carrito/CartProvider';
+import { ProductoSheet } from '../../features/public/catalogo/components/ProductoSheet';
+import { PublicHeader } from '../../features/public/components/PublicHeader';
 import './publicLayout.css';
 
+// El carrito y el detalle de producto viven acá: se abren desde cualquier pantalla pública.
 export function PublicLayout() {
   return (
-    <>
-      <header className="pub-header">
-        <div className="l-container pub-header__inner">
-          <Link to="/" className="pub-header__brand" aria-label="Black Station, ir al catálogo">
-            <img className="pub-header__isotipo" src={isotipoUrl} alt="" />
-            <img className="pub-header__logo" src={logoUrl} alt="" />
-          </Link>
-        </div>
-      </header>
-      <main className="l-container pub-main">
-        <Outlet />
-      </main>
-    </>
+    <CartProvider>
+      <div className="pub-shell">
+        <PublicHeader />
+        <main className="l-container pub-main">
+          <Outlet />
+        </main>
+      </div>
+      <CartDrawer />
+      <ProductoSheet />
+    </CartProvider>
   );
 }

@@ -1,42 +1,17 @@
 @layer features {
-  .pub-header {
-    position: sticky;
-    top: 0;
-    z-index: var(--z-header);
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
+  /* Alto fijo del header: lo usan los elementos sticky que van debajo (chips del catálogo). */
+  :root {
+    --pub-header-h: calc(var(--tap-min) + var(--space-3) * 2);
   }
 
-  .pub-header__inner {
+  .pub-shell {
     display: flex;
-    align-items: center;
-    padding-block: var(--space-2);
-  }
-
-  .pub-header__brand {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tap-min);
-  }
-
-  .pub-header__isotipo {
-    height: var(--space-6);
-
-    @media (min-width: 768px) {
-      display: none;
-    }
-  }
-
-  .pub-header__logo {
-    display: none;
-    height: var(--space-8);
-
-    @media (min-width: 768px) {
-      display: block;
-    }
+    flex-direction: column;
+    min-height: 100dvh;
   }
 
   .pub-main {
-    padding-block: var(--space-6);
+    flex: 1;
+    padding-block: var(--space-5) var(--space-7);
   }
 }

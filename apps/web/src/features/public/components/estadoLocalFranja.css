@@ -1,0 +1,49 @@
+@layer features {
+  .pub-estado-local {
+    --estado-local-color: var(--text-muted);
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+
+    &::before {
+      content: '';
+      flex-shrink: 0;
+      width: var(--space-2);
+      height: var(--space-2);
+      background: var(--estado-local-color);
+      border-radius: var(--radius-full);
+    }
+
+    &[data-local='abierto'] {
+      --estado-local-color: var(--success);
+    }
+
+    &[data-local='cerrado'],
+    &[data-local='deshabilitado'] {
+      --estado-local-color: var(--danger);
+    }
+  }
+
+  .pub-estado-local__reintentar {
+    min-height: var(--tap-min);
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .pub-estado-local__skeleton {
+    height: var(--tap-min);
+    border-radius: var(--radius-md);
+  }
+}

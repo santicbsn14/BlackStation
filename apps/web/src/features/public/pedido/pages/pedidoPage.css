@@ -1,0 +1,108 @@
+@layer features {
+  .pub-pedido {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  .pub-pedido__mensaje {
+    align-items: center;
+    padding-block: var(--space-7);
+    text-align: center;
+
+    & h1 {
+      font-size: var(--fs-2xl);
+    }
+  }
+
+  .pub-pedido__offline {
+    padding: var(--space-2) var(--space-4);
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-md);
+    color: var(--warning);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+  }
+
+  .pub-pedido__cabecera {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .pub-pedido__numero {
+    font-size: var(--fs-4xl);
+  }
+
+  .pub-pedido__hora {
+    color: var(--accent);
+    font-size: var(--fs-3xl);
+    font-weight: var(--fw-bold);
+    font-variation-settings: 'wdth' var(--wdth-condensed);
+    line-height: var(--lh-tight);
+    text-transform: uppercase;
+  }
+
+  .pub-pedido__estado {
+    padding: var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-semibold);
+  }
+
+  .pub-pedido__detalle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+
+    & h2 {
+      font-size: var(--fs-xl);
+    }
+  }
+
+  .pub-pedido__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pub-pedido__item-head {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-weight: var(--fw-semibold);
+  }
+
+  .pub-pedido__aclaracion {
+    color: var(--text-muted);
+
+    & span {
+      color: var(--text);
+      font-weight: var(--fw-semibold);
+    }
+  }
+
+  .pub-pedido__total {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fs-xl);
+  }
+
+  .pub-pedido__skeleton-titulo {
+    width: 60%;
+    height: var(--space-8);
+  }
+
+  .pub-pedido__skeleton-bloque {
+    height: calc(var(--space-8) * 2);
+    border-radius: var(--radius-lg);
+  }
+}

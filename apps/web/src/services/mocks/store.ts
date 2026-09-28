@@ -1,12 +1,21 @@
-import type { Category, Extra, Order, PickupSlot, Product, Settings } from '@blackstation/shared';
+import type {
+  Category,
+  Customer,
+  Extra,
+  Order,
+  PickupSlot,
+  Product,
+  Settings,
+} from '@blackstation/shared';
 import categoriesJson from './data/categories.json';
+import customersJson from './data/customers.json';
 import extrasJson from './data/extras.json';
 import productsJson from './data/products.json';
 import settingsJson from './data/settings.json';
 
 const STORAGE_KEY = 'bs-mock-db';
 /** Subir si cambian los fixtures o la forma del store: fuerza un reseed. */
-const VERSION = 1;
+const VERSION = 2;
 
 export type MockDb = {
   version: number;
@@ -14,6 +23,7 @@ export type MockDb = {
   products: Product[];
   extras: Extra[];
   settings: Settings;
+  customers: Customer[];
   pickupSlots: PickupSlot[];
   orders: Order[];
 };
@@ -23,12 +33,15 @@ function seed(): MockDb {
   const products: Product[] = productsJson;
   const extras: Extra[] = extrasJson;
   const settings: Settings = settingsJson;
+  // El JSON infiere `estado` como string; los valores del fixture son del enum.
+  const customers = customersJson as Customer[];
   return structuredClone({
     version: VERSION,
     categories,
     products,
     extras,
     settings,
+    customers,
     pickupSlots: [],
     orders: [],
   });
