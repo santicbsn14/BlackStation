@@ -5,11 +5,12 @@ import {
   type PublicOrder,
   type PublicSettings,
 } from '@blackstation/shared';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Badge } from '../../../../components/Badge';
-import { btnClass } from '../../../../components/Button';
+import { Button, btnClass } from '../../../../components/Button';
 import { Skeleton } from '../../../../components/Skeleton';
+import { useToast } from '../../../../components/Toast';
 import { useCountdown } from '../../../../hooks/useCountdown';
 import { waLink } from '../../../../lib/whatsapp';
 import { ApiError } from '../../../../services';
@@ -17,7 +18,9 @@ import { ItemDetalle } from '../../components/ItemDetalle';
 import { useOrder } from '../../hooks/useOrder';
 import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { borrarPedidoActivo } from '../../storage';
+import { CancelarSheet } from '../components/CancelarSheet';
 import { TransferenciaPasos } from '../components/TransferenciaPasos';
+import { useCancelOrder } from '../hooks/useCancelOrder';
 import './pedidoPage.css';
 
 const ETIQUETA_ESTADO: Record<EstadoPedido, string> = {
@@ -31,6 +34,9 @@ export function PedidoPage() {
   const { codigo = '' } = useParams();
   const { data: order, error, isPending, isError, refetch } = useOrder(codigo);
   const settings = usePublicSettings();
+  const cancelar = useCancelOrder(codigo);
+  const toast = useToast();
+  const [cancelarAbierto, setCancelarAbierto] = useState(false);
   const restante = useCountdown(
     order?.estado === 'pendiente' && order.metodoPago === 'transferencia' ? order.expiresAt : null,
   );
@@ -45,6 +51,27 @@ export function PedidoPage() {
   useEffect(() => {
     if (vencido) void refetch();
   }, [vencido, refetch]);
+
+  function confirmarCancelacion() {
+    cancelar.mutate(undefined, {
+      onSuccess: () => setCancelarAbierto(false),
+      onError: (err) => {
+        if (!(err instanceof ApiError) || err.code !== 'INVALID_TRANSITION') {
+          toast('No pudimos cancelar tu pedido. Probá de nuevo.');
+          return;
+        }
+        // El pedido cambió en el medio (lo confirmaron o venció): mostrar el estado actual.
+        setCancelarAbierto(false);
+        void refetch().then(({ data }) => {
+          toast(
+            data?.estado === 'confirmado'
+              ? 'Tu pedido ya fue confirmado. Si necesitás cambiarlo, escribinos por WhatsApp.'
+              : 'Tu pedido ya no se puede cancelar.',
+          );
+        });
+      },
+    });
+  }
 
   if (isPending) return <PedidoSkeleton />;
 
@@ -85,6 +112,21 @@ export function PedidoPage() {
       </header>
 
       <EstadoBloque order={order} settings={settings.data} restante={restante} />
+
+      {order.estado === 'pendiente' && (
+        <Button className="pub-pedido__cancelar" onClick={() => setCancelarAbierto(true)}>
+          Cancelar pedido
+        </Button>
+      )}
+      {cancelarAbierto && order.estado === 'pendiente' && (
+        <CancelarSheet
+          numero={order.numero}
+          telefonoLocal={settings.data?.telefonoLocal}
+          cancelando={cancelar.isPending}
+          onVolver={() => setCancelarAbierto(false)}
+          onCancelar={confirmarCancelacion}
+        />
+      )}
 
       <section className="pub-pedido__detalle" aria-labelledby="pedido-detalle-titulo">
         <h2 id="pedido-detalle-titulo">Detalle</h2>
@@ -143,6 +185,16 @@ function EstadoBloque({ order, settings, restante }: EstadoBloqueProps) {
     case 'entregado':
       return <p className="pub-pedido__estado">¡Gracias! Pedido entregado.</p>;
     case 'cancelado':
+      if (order.motivoCancelacion === 'cliente') {
+        return (
+          <div className="pub-pedido__estado l-stack">
+            <p>Cancelaste tu pedido.</p>
+            <Link to="/" className={btnClass('primary')}>
+              Hacer un nuevo pedido
+            </Link>
+          </div>
+        );
+      }
       if (order.motivoCancelacion === 'vencido') {
         return (
           <div className="pub-pedido__estado l-stack">

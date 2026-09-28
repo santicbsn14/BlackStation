@@ -13,6 +13,7 @@ export const TRANSICIONES: readonly Transicion[] = [
   { desde: 'confirmado', hacia: 'entregado', motivo: null, actor: 'panel' },
   { desde: 'pendiente', hacia: 'cancelado', motivo: 'vencido', actor: 'job' },
   { desde: 'pendiente', hacia: 'cancelado', motivo: 'manual', actor: 'panel' },
+  { desde: 'pendiente', hacia: 'cancelado', motivo: 'cliente', actor: 'cliente' },
   { desde: 'confirmado', hacia: 'cancelado', motivo: 'no_retiro', actor: 'panel' },
   { desde: 'confirmado', hacia: 'cancelado', motivo: 'manual', actor: 'panel' },
 ];

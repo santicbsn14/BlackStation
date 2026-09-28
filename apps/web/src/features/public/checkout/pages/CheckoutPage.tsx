@@ -11,6 +11,7 @@ import { usePublicSettings } from '../../hooks/usePublicSettings';
 import { useSlots } from '../../hooks/useSlots';
 import { FranjasSelector } from '../components/FranjasSelector';
 import { MetodoPagoSelector } from '../components/MetodoPagoSelector';
+import { RepasoSheet } from '../components/RepasoSheet';
 import { ResumenPedido } from '../components/ResumenPedido';
 import { CHECKOUT_IDS, useCheckoutForm } from '../hooks/useCheckoutForm';
 import './checkoutPage.css';
@@ -256,6 +257,18 @@ function CheckoutForm() {
           Confirmar pedido
         </Button>
       </div>
+
+      {form.repasoAbierto && form.hora && (
+        <RepasoSheet
+          hora={form.hora}
+          total={total}
+          metodoPago={form.metodoPago}
+          minutosTransferencia={settings.data?.minutosTransferencia}
+          enviando={form.enviando}
+          onVolver={form.cerrarRepaso}
+          onConfirmar={form.enviar}
+        />
+      )}
     </form>
   );
 }

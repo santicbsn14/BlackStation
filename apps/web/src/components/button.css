@@ -64,6 +64,17 @@
     }
   }
 
+  /* Acciones destructivas (cancelar un pedido). */
+  .btn--danger {
+    background: var(--danger);
+    color: var(--text);
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--danger) 85%, var(--color-black));
+      color: var(--text);
+    }
+  }
+
   .btn--block {
     width: 100%;
   }

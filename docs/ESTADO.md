@@ -9,6 +9,7 @@
 | 02 | Setup del monorepo: `shared`, design system base, routing, servicios y mocks | ✅ Cerrada |
 | 02b | Ajustes post-revisión: códigos de error, `abierto` en slots, listas admin envueltas | ✅ Cerrada |
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | 🟡 Implementada, falta deploy Demo 1 |
+| 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Implementada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | Pendiente |
 | 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | Pendiente |
 | 06 | Reglas de reputación de clientes | Pendiente |
@@ -22,6 +23,43 @@
 - [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) — arquitectura CSS, tokens y reglas de estilos.
 
 ## Registro de cambios
+
+### 2026-09-28 — Etapa 03c: repaso antes de enviar + cancelación por el cliente
+- `MODELO_DATOS.md`: motivo `cliente` (§3.4), transición `pendiente` → `cancelado`/`cliente` por el
+  Cliente (§4, libera cupo y no toca `customers`) y `POST /api/orders/:codigo/cancelar` (§6). Sin
+  codes nuevos en §10.
+- `@blackstation/shared`: `cliente` en `MOTIVOS_CANCELACION`, actor `cliente` en
+  `ACTORES_TRANSICION` y la transición en `TRANSICIONES` (7). 57 tests (+2).
+- Services: `cancelOrder(codigo)` en `api/` y `mocks/`. El mock primero vence lo vencido (como el
+  job), valida con `puedeTransicionar`, libera el cupo y responde 404 `ORDER_NOT_FOUND` / 409
+  `INVALID_TRANSITION`. `liberarCupo` y `toPublicOrder` quedan compartidos con el vencimiento y el
+  `GET`.
+- Checkout: "Confirmar pedido" valida y abre `RepasoSheet` ("¿Hacemos el pedido?", hora, total y
+  texto por método de pago). "Sí, hacer pedido" revalida, lleva spinner y no se puede cerrar el
+  sheet mientras viaja el POST. Un error cierra el sheet y aplica la tabla de la Etapa 03.
+- Seguimiento: botón "Cancelar pedido" solo en `pendiente`, `CancelarSheet` con aviso y `wa.me`,
+  hook `useCancelOrder`. Estado `cancelado`/`cliente`: "Cancelaste tu pedido." + "Hacer un nuevo
+  pedido".
+- `Button` suma la variante `danger` (`.btn--danger`, con `--danger`).
+- Probado con Chrome headless a 375 px (30 chequeos): formulario inválido sin sheet, textos por
+  método, "Volver" sin pedido, 409 `SLOT_FULL` con el sheet abierto (se cierra, error inline y foco
+  en horario), cancelación con cupo liberado y la franja de vuelta en el checkout, banner y
+  `bs-pedido-activo` borrados, 409 por confirmación en el medio (toast + estado actualizado), sin
+  botón en `confirmado`/`entregado`/`cancelado`. Sin errores de consola.
+
+**Desvíos y decisiones**
+- **Actor `cliente` en `ACTORES_TRANSICION`:** el brief pide la transición en `transitions.ts`, y la
+  tabla necesita un actor. §4 ya dice "Quién: Cliente".
+- `useCancelOrder` además invalida `slotKeys.all` (se liberó un cupo) y guarda la respuesta con
+  `setQueryData` para mostrar el estado final sin esperar el refetch.
+- Toast del 409: el texto del brief ("Tu pedido ya fue confirmado…") sale solo si el refetch trae
+  `confirmado`. Si el pedido venció en el medio sale "Tu pedido ya no se puede cancelar." y la
+  pantalla muestra el estado de vencido. Otros errores del cancel: toast genérico con el sheet
+  abierto para reintentar.
+- Si la franja elegida desaparece con el repaso abierto (polling de slots), el sheet se cierra y
+  queda el aviso de franja perdida del formulario.
+- Si `public-settings` todavía no cargó, el texto de transferencia dice "unos minutos" en vez del
+  número.
 
 ### 2026-09-28 — Etapa 03: app pública
 - Componentes base en `components/`, cada uno con su CSS en `@layer components`: `Button` (`.btn`),

@@ -1,0 +1,19 @@
+@layer features {
+  .pub-repaso__resumen {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-semibold);
+  }
+
+  .pub-repaso__pago {
+    color: var(--text-muted);
+  }
+
+  .pub-repaso__acciones {
+    display: flex;
+    gap: var(--space-3);
+
+    & > * {
+      flex: 1;
+    }
+  }
+}

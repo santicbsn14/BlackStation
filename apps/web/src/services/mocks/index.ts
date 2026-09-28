@@ -5,6 +5,7 @@ import {
   calcularSubtotal,
   calcularTotal,
   getJornada,
+  puedeTransicionar,
   type CatalogResponse,
   type CreateOrderRequest,
   type CreateOrderResponse,
@@ -26,6 +27,14 @@ function isForceOpen(): boolean {
   return import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
 }
 
+/** Toda cancelación libera el cupo de la franja (§4). */
+function liberarCupo(db: MockDb, order: Order, ahoraIso: string): void {
+  const slot = db.pickupSlots.find((s) => s._id === order.slotId);
+  if (!slot) return;
+  slot.ocupados = Math.max(0, slot.ocupados - 1);
+  slot.updatedAt = ahoraIso;
+}
+
 /**
  * Reemplazo del job de vencimiento (§5.4) mientras no hay API: se aplica al leer.
  * Todo pedido `pendiente` con `expiresAt ≤ ahora` pasa a `cancelado`/`vencido` y libera su cupo.
@@ -40,11 +49,7 @@ function vencerPendientes(db: MockDb, ahora: Date): void {
     order.motivoCancelacion = 'vencido';
     order.canceladoAt = ahoraIso;
     order.updatedAt = ahoraIso;
-    const slot = db.pickupSlots.find((s) => s._id === order.slotId);
-    if (slot) {
-      slot.ocupados = Math.max(0, slot.ocupados - 1);
-      slot.updatedAt = ahoraIso;
-    }
+    liberarCupo(db, order, ahoraIso);
     cambio = true;
   }
   if (cambio) saveDb();
@@ -338,7 +343,33 @@ export async function getOrderByCodigo(codigo: string): Promise<PublicOrder> {
   vencerPendientes(db, new Date());
   const order = db.orders.find((o) => o.codigo === codigo);
   if (!order) throw mockError('ORDER_NOT_FOUND', 'No encontramos ese pedido.');
+  return toPublicOrder(order);
+}
 
+/** `POST /orders/:codigo/cancelar` (§6): solo desde `pendiente`, con motivo `cliente`. */
+export async function cancelOrder(codigo: string): Promise<PublicOrder> {
+  await latency();
+  const db = getDb();
+  const ahora = new Date();
+  // Como el job corre antes: un `pendiente` ya vencido no se puede cancelar (409).
+  vencerPendientes(db, ahora);
+  const order = db.orders.find((o) => o.codigo === codigo);
+  if (!order) throw mockError('ORDER_NOT_FOUND', 'No encontramos ese pedido.');
+  if (!puedeTransicionar(order.estado, 'cancelado', 'cliente', 'cliente')) {
+    throw mockError('INVALID_TRANSITION', 'El pedido ya no se puede cancelar.');
+  }
+
+  const ahoraIso = ahora.toISOString();
+  order.estado = 'cancelado';
+  order.motivoCancelacion = 'cliente';
+  order.canceladoAt = ahoraIso;
+  order.updatedAt = ahoraIso;
+  liberarCupo(db, order, ahoraIso);
+  saveDb();
+  return toPublicOrder(order);
+}
+
+function toPublicOrder(order: Order): PublicOrder {
   return structuredClone({
     codigo: order.codigo,
     numero: order.numero,

@@ -1,0 +1,14 @@
+@layer features {
+  .pub-cancelar__aviso {
+    color: var(--text-muted);
+  }
+
+  .pub-cancelar__acciones {
+    display: flex;
+    gap: var(--space-3);
+
+    & > * {
+      flex: 1;
+    }
+  }
+}

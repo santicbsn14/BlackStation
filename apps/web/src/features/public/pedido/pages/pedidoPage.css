@@ -56,6 +56,10 @@
     font-weight: var(--fw-semibold);
   }
 
+  .pub-pedido__cancelar {
+    align-self: flex-start;
+  }
+
   .pub-pedido__detalle {
     display: flex;
     flex-direction: column;

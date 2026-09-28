@@ -5,6 +5,7 @@ import {
   type MetodoPago,
 } from '@blackstation/shared';
 import { useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { useToast } from '../../../../components/Toast';
 import { ApiError } from '../../../../services';
@@ -79,11 +80,15 @@ export function useCheckoutForm() {
   const [bloqueado, setBloqueado] = useState(false);
   /** 423: el local cerró mientras se completaba el formulario. */
   const [cerrado, setCerrado] = useState(false);
+  /** Sheet de repaso antes de crear el pedido. */
+  const [repasoAbierto, setRepasoAbierto] = useState(false);
 
   // Si la franja elegida desaparece del listado (se llenó o pasó), deja de contar como elegida.
   const franjas = slots.data?.slots ?? [];
   const horaElegida = hora !== null && franjas.some((f) => f.hora === hora) ? hora : null;
   const franjaPerdida = hora !== null && slots.data && horaElegida === null ? hora : null;
+  // Sin franja no hay nada que repasar: el aviso de franja perdida queda en el formulario.
+  if (repasoAbierto && horaElegida === null && !createOrder.isPending) setRepasoAbierto(false);
 
   function setError(campo: CampoConError, mensaje: string | undefined) {
     setErrores((actuales) => {
@@ -166,9 +171,8 @@ export function useCheckoutForm() {
     }
   }
 
-  function confirmar() {
-    if (createOrder.isPending) return;
-
+  /** Valida el formulario. Si hay errores los marca, lleva al primero y devuelve `null`. */
+  function validar() {
     const nuevos: ErroresCheckout = {};
     if (!nombre.trim()) nuevos.nombre = 'Ingresá tu nombre.';
     const telefono = normalizarTelefono(caracteristica, numero);
@@ -179,16 +183,38 @@ export function useCheckoutForm() {
     const primero = (['nombre', 'telefono', 'hora'] as const).find((campo) => nuevos[campo]);
     if (primero) {
       llevarA(DESTINO_ERROR[primero]);
+      return null;
+    }
+    if (!telefono.ok || !horaElegida) return null;
+    return { telefono: telefono.telefono, hora: horaElegida };
+  }
+
+  /** "Confirmar pedido": si el formulario es válido, abre el repaso en vez de enviar. */
+  function confirmar() {
+    if (createOrder.isPending) return;
+    if (validar()) setRepasoAbierto(true);
+  }
+
+  function cerrarRepaso() {
+    if (!createOrder.isPending) setRepasoAbierto(false);
+  }
+
+  /** "Sí, hacer pedido" en el repaso. */
+  function enviar() {
+    if (createOrder.isPending) return;
+    const valido = validar();
+    if (!valido) {
+      // Algo cambió con el repaso abierto (por ejemplo, la franja se llenó): volver al formulario.
+      setRepasoAbierto(false);
       return;
     }
-    if (!telefono.ok || !horaElegida) return;
 
     guardarCliente({ nombre: nombre.trim(), caracteristica, numero });
     const request: CreateOrderRequest = {
-      cliente: { nombre: nombre.trim(), telefono: telefono.telefono },
+      cliente: { nombre: nombre.trim(), telefono: valido.telefono },
       items: lineas.map((l) => l.linea),
       aclaracion: aclaracion.trim() || undefined,
-      hora: horaElegida,
+      hora: valido.hora,
       metodoPago,
     };
     createOrder.mutate(request, {
@@ -197,7 +223,11 @@ export function useCheckoutForm() {
         guardarPedidoActivo(codigo);
         void navigate(`/pedido/${codigo}`, { replace: true });
       },
-      onError: manejarError,
+      onError: (error) => {
+        // Cierra el repaso ya: al desmontarse devuelve el foco al botón, y el error lo mueve después.
+        flushSync(() => setRepasoAbierto(false));
+        manejarError(error);
+      },
     });
   }
 
@@ -225,5 +255,8 @@ export function useCheckoutForm() {
     cerrado,
     enviando: createOrder.isPending,
     confirmar,
+    repasoAbierto,
+    cerrarRepaso,
+    enviar,
   };
 }

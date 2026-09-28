@@ -30,6 +30,10 @@ export function getOrderByCodigo(codigo: string): Promise<PublicOrder> {
   return http(`/api/orders/${encodeURIComponent(codigo)}`);
 }
 
+export function cancelOrder(codigo: string): Promise<PublicOrder> {
+  return http(`/api/orders/${encodeURIComponent(codigo)}/cancelar`, { method: 'POST' });
+}
+
 export function login(request: LoginRequest): Promise<LoginResponse> {
   return http('/api/auth/login', { method: 'POST', body: request });
 }

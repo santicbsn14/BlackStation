@@ -143,7 +143,7 @@ erDiagram
 | `confirmadoAt` | Date | no | `null` | |
 | `entregadoAt` | Date | no | `null` | |
 | `canceladoAt` | Date | no | `null` | |
-| `motivoCancelacion` | enum `vencido` \| `manual` \| `no_retiro` | no | `null` | Obligatorio si `estado = cancelado`. |
+| `motivoCancelacion` | enum `vencido` \| `manual` \| `no_retiro` \| `cliente` | no | `null` | Obligatorio si `estado = cancelado`. |
 | `impresoAt` | Date | no | `null` | Lo setea el print server al imprimir. `null` + `confirmado` = en cola de impresión. |
 | `createdAt` / `updatedAt` | Date | sí | auto | `updatedAt` se usa para el polling incremental del panel. |
 
@@ -301,7 +301,7 @@ stateDiagram-v2
     [*] --> pendiente: POST /api/orders
     pendiente --> confirmado: panel (manual)
     confirmado --> entregado: panel
-    pendiente --> cancelado: vencido (job) / manual (panel)
+    pendiente --> cancelado: vencido (job) / manual (panel) / cliente
     confirmado --> cancelado: no_retiro / manual (panel)
     entregado --> [*]
     cancelado --> [*]
@@ -320,14 +320,16 @@ stateDiagram-v2
 | `confirmado` | `entregado` | — | Panel | `entregadoAt = now`; `customers.entregados++`. |
 | `pendiente` | `cancelado` | `vencido` | Job interno | `canceladoAt = now`; libera cupo. Solo pedidos con `expiresAt` vencido. |
 | `pendiente` | `cancelado` | `manual` | Panel | `canceladoAt = now`; libera cupo. |
+| `pendiente` | `cancelado` | `cliente` | Cliente | `canceladoAt = now`; libera cupo. No toca `customers` (no es no-show). Vía `POST /api/orders/:codigo/cancelar`. |
 | `confirmado` | `cancelado` | `no_retiro` | Panel | `canceladoAt = now`; libera cupo; `customers.noShows++`. |
 | `confirmado` | `cancelado` | `manual` | Panel | `canceladoAt = now`; libera cupo. |
 
 - `entregado` y `cancelado` son estados finales.
 - Cualquier otra transición se rechaza (409).
 - `vencido` solo lo asigna el job; el panel no puede usarlo.
+- `cliente` solo lo asigna `POST /api/orders/:codigo/cancelar`; el panel no puede usarlo.
 - Las transiciones se aplican con condición sobre el estado actual (`findOneAndUpdate` con
-  `estado` esperado) para que el job y el panel no pisen la misma orden.
+  `estado` esperado) para que el job, el panel y el cliente no pisen la misma orden.
 
 ---
 
@@ -414,6 +416,7 @@ Sin autenticación.
 | `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }` |
 | `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado. |
 | `GET /api/orders/:codigo` | — | `{ codigo, numero, fecha, horaRetiro, cliente: { nombre }, items, aclaracion, metodoPago, estado, motivoCancelacion, total, expiresAt, createdAt, updatedAt }`. No expone el teléfono. 404 si no existe. |
+| `POST /api/orders/:codigo/cancelar` | — (sin body) | El mismo JSON que `GET /api/orders/:codigo`, ya en `cancelado` con `motivoCancelacion: 'cliente'`. El `codigo` actúa de credencial. Solo si está `pendiente`: se aplica con condición `estado: 'pendiente'` para no pisarse con el job de vencimiento, y libera el cupo. Errores: 404 `ORDER_NOT_FOUND`; 409 `INVALID_TRANSITION` si no está `pendiente`. |
 
 ---
 

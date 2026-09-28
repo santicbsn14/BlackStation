@@ -22,6 +22,19 @@ describe('puedeTransicionar', () => {
     expect(puedeTransicionar('pendiente', 'cancelado', 'manual', 'job')).toBe(false);
   });
 
+  it('cliente solo lo usa el cliente, y solo desde pendiente', () => {
+    expect(puedeTransicionar('pendiente', 'cancelado', 'cliente', 'cliente')).toBe(true);
+    expect(puedeTransicionar('pendiente', 'cancelado', 'cliente', 'panel')).toBe(false);
+    expect(puedeTransicionar('pendiente', 'cancelado', 'cliente', 'job')).toBe(false);
+    expect(puedeTransicionar('confirmado', 'cancelado', 'cliente', 'cliente')).toBe(false);
+  });
+
+  it('el cliente no hace otras transiciones', () => {
+    expect(puedeTransicionar('pendiente', 'confirmado', null, 'cliente')).toBe(false);
+    expect(puedeTransicionar('pendiente', 'cancelado', 'manual', 'cliente')).toBe(false);
+    expect(puedeTransicionar('confirmado', 'cancelado', 'manual', 'cliente')).toBe(false);
+  });
+
   it('no_retiro solo desde confirmado', () => {
     expect(puedeTransicionar('pendiente', 'cancelado', 'no_retiro', 'panel')).toBe(false);
   });
@@ -48,8 +61,8 @@ describe('puedeTransicionar', () => {
     }
   });
 
-  it('la tabla tiene exactamente las 6 transiciones de MODELO_DATOS §4', () => {
-    expect(TRANSICIONES).toHaveLength(6);
+  it('la tabla tiene exactamente las 7 transiciones de MODELO_DATOS §4', () => {
+    expect(TRANSICIONES).toHaveLength(7);
   });
 });
 
