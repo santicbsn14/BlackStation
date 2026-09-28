@@ -1,0 +1,83 @@
+/* Sin @layer: solo custom properties. Única fuente de colores, espaciados, radios y z-index. */
+:root {
+  /* Marca */
+  --color-black: #0c0c0c;
+  --color-orange: #fd6001;
+  --color-orange-hover: #ff7a26;
+  --color-orange-pressed: #e05500;
+  --color-orange-soft: rgb(253 96 1 / 0.12);
+  --color-white: #ffffff;
+
+  /* Superficies (tema oscuro único) */
+  --bg: var(--color-black);
+  --surface-1: #161616;
+  --surface-2: #1f1f1f;
+  --border: #2a2a2a;
+  --border-strong: #3a3a3a;
+
+  /* Texto */
+  --text: var(--color-white);
+  --text-muted: #a3a3a3;
+  --text-on-accent: var(--color-black);
+  --accent: var(--color-orange);
+
+  /* Estados de pedido */
+  --estado-pendiente: #eab308;
+  --estado-confirmado: #3b82f6;
+  --estado-entregado: #22c55e;
+  --estado-cancelado: #ef4444;
+
+  /* Feedback */
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #eab308;
+
+  /* Tipografía */
+  --font-sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.25rem;
+  --fs-2xl: 1.5rem;
+  --fs-3xl: clamp(1.75rem, 1.4rem + 1.5vw, 2.25rem);
+  --fs-4xl: clamp(2.25rem, 1.8rem + 2vw, 3rem);
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 800;
+  --wdth-condensed: 62;
+  --lh-tight: 1.15;
+  --lh-base: 1.5;
+
+  /* Espaciado (base 4px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Forma */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* Capas */
+  --z-header: 10;
+  --z-drawer: 20;
+  --z-modal: 30;
+  --z-toast: 40;
+
+  /* Movimiento */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+
+  /* Tamaños */
+  --tap-min: 44px;
+  --container-max: 1200px;
+}

@@ -1,0 +1,4 @@
+# Los docs se editan a mano.
+docs/
+CLAUDE.md
+package-lock.json

@@ -1,0 +1,42 @@
+@layer features {
+  .pub-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pub-header__inner {
+    display: flex;
+    align-items: center;
+    padding-block: var(--space-2);
+  }
+
+  .pub-header__brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+  }
+
+  .pub-header__isotipo {
+    height: var(--space-6);
+
+    @media (min-width: 768px) {
+      display: none;
+    }
+  }
+
+  .pub-header__logo {
+    display: none;
+    height: var(--space-8);
+
+    @media (min-width: 768px) {
+      display: block;
+    }
+  }
+
+  .pub-main {
+    padding-block: var(--space-6);
+  }
+}

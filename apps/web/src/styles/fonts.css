@@ -1,0 +1,3 @@
+/* Sin @layer: solo @font-face. Archivo variable con ejes wght + wdth (el wdth hace falta para
+   los títulos condensados). */
+@import '@fontsource-variable/archivo/wdth.css';

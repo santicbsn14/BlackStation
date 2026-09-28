@@ -180,7 +180,7 @@ literales y **solo estos**:
 ## 8. Reglas
 
 - Ningún hex, `rgb()`, espaciado, radio ni z-index fuera de `tokens.css` (excepción: `1px` de borde).
-- Todo archivo CSS declara su `@layer`.
+- Todo archivo CSS declara su `@layer`, salvo `tokens.css` y `fonts.css` (solo custom properties y `@font-face`).
 - Un componente = un archivo CSS con el mismo nombre (`Button.tsx` → `button.css`).
 - Nada de estilos inline salvo valores dinámicos imposibles en CSS (ej. un `--progress` calculado).
 

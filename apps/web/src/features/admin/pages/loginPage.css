@@ -1,0 +1,22 @@
+@layer features {
+  .adm-login {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: var(--space-4);
+  }
+
+  .adm-login__form {
+    width: 100%;
+    max-width: 22rem;
+    padding: var(--space-6);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .adm-login__logo {
+    width: var(--space-8);
+    margin-inline: auto;
+  }
+}

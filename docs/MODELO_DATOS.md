@@ -115,7 +115,7 @@ erDiagram
 | Campo | Tipo | Req. | Default | Notas |
 |---|---|---|---|---|
 | `_id` | ObjectId | sí | auto | Uso interno y panel. |
-| `codigo` | string | sí | generado | Aleatorio, único, no adivinable. Identifica el pedido en el seguimiento público (`/pedido/:codigo`). |
+| `codigo` | string | sí | generado | Aleatorio, único, no adivinable: 8 caracteres del alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sin `0`, `O`, `1`, `I`, `L`). Identifica el pedido en el seguimiento público (`/pedido/:codigo`). |
 | `numero` | number (entero) | sí | generado | Correlativo que se reinicia por jornada (1, 2, 3…). Es el número que ve el cliente y el local. |
 | `fecha` | string `YYYY-MM-DD` | sí | — | Jornada operativa del pedido. |
 | `cliente` | object | sí | — | |
@@ -339,6 +339,9 @@ stateDiagram-v2
 - Si el horario del día anterior cruza la medianoche y la hora actual es menor a su `cierra`,
   la jornada actual es la del día anterior. Si no, es la de hoy.
 - Solo se aceptan pedidos para la **jornada actual**; no hay pedidos a futuro.
+- Solo se aceptan pedidos **mientras el local está abierto**: la hora actual está entre `abre` (inclusive)
+  y `cierra` (exclusive) de la jornada actual. Fuera de ese rango → 423 `CLOSED`. El catálogo se
+  puede ver igual.
 
 ### 5.2 Franjas posibles
 
@@ -353,7 +356,8 @@ stateDiagram-v2
 
 Se valida, en este orden:
 
-1. `settings.pedidosHabilitados = true` y el día de la jornada está `activo`.
+1. `settings.pedidosHabilitados = true`, el día de la jornada está `activo` y el local está abierto
+   ahora (`abre` ≤ ahora < `cierra`, ver §5.1).
 2. Customer: si `estado = bloqueado` → rechazo. Si `estado = requiereTransferencia` → solo se
    acepta `metodoPago = transferencia`.
 3. Cada ítem: producto existe, `activo`, `disponible` y su categoría `activa`; `cantidad ≥ 1`;
@@ -406,9 +410,9 @@ Sin autenticación.
 |---|---|---|
 | `GET /health` | — | `{ ok: true, time }` |
 | `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Ordenado por `orden`. |
-| `GET /api/slots` | — | `{ fecha, slots: [{ hora, inicio, disponibles }] }`. Franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
+| `GET /api/slots` | — | `{ fecha, abierto, slots: [{ hora, inicio, disponibles }] }`. `abierto` indica si hoy se pueden tomar pedidos en este momento (`pedidosHabilitados`, día activo y dentro del horario). Si es `false`, `slots` viene vacío. Si es `true`: franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
 | `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }` |
-| `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados. |
+| `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado. |
 | `GET /api/orders/:codigo` | — | `{ codigo, numero, fecha, horaRetiro, cliente: { nombre }, items, aclaracion, metodoPago, estado, motivoCancelacion, total, expiresAt, createdAt, updatedAt }`. No expone el teléfono. 404 si no existe. |
 
 ---
@@ -443,16 +447,16 @@ CRUD con borrado soft. `DELETE` pone `activa`/`activo` en `false`; no se borra e
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/categories` | — | Lista completa (incluye inactivas). |
+| `GET /api/admin/categories` | — | `{ categories: [category] }`. Lista completa (incluye inactivas). |
 | `POST /api/admin/categories` | `{ nombre, orden? }` | `201` categoría creada. |
 | `PUT /api/admin/categories/:id` | `{ nombre?, orden?, activa? }` | Categoría actualizada. |
 | `DELETE /api/admin/categories/:id` | — | `{ ok: true }` (soft). |
-| `GET /api/admin/products` | — | Lista completa (incluye inactivos). |
+| `GET /api/admin/products` | — | `{ products: [product] }`. Lista completa (incluye inactivos). |
 | `POST /api/admin/products` | `{ nombre, descripcion?, categoriaId, precio, fotoUrl?, fotoPublicId?, orden?, ingredientesQuitables?, extrasIds? }` | `201` producto creado. |
 | `PUT /api/admin/products/:id` | Mismos campos, todos opcionales | Producto actualizado. |
 | `DELETE /api/admin/products/:id` | — | `{ ok: true }` (soft). |
 | `PATCH /api/admin/products/:id/disponible` | `{ disponible }` | Producto actualizado. |
-| `GET /api/admin/extras` | — | Lista completa (incluye inactivos). |
+| `GET /api/admin/extras` | — | `{ extras: [extra] }`. Lista completa (incluye inactivos). |
 | `POST /api/admin/extras` | `{ nombre, precio, cantidadMax? }` | `201` extra creado. |
 | `PUT /api/admin/extras/:id` | `{ nombre?, precio?, cantidadMax? }` | Extra actualizado. |
 | `DELETE /api/admin/extras/:id` | — | `{ ok: true }` (soft). |
@@ -510,7 +514,39 @@ Formato único para toda respuesta de error:
 | 409 | Conflicto: franja llena/cerrada, transición de estado inválida. |
 | 423 | Pedidos deshabilitados (`pedidosHabilitados = false` o fuera de horario). |
 
-Los `code` concretos se definen al implementar cada endpoint.
+**Códigos (`code`):**
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `EMPTY_ORDER` | Pedido sin ítems. |
+| 400 | `PRODUCT_UNAVAILABLE` | Producto inexistente, inactivo, agotado o con categoría inactiva. |
+| 400 | `INVALID_QUANTITY` | `cantidad` < 1 o no entera. |
+| 400 | `INVALID_REMOVED` | `quitados` fuera de `ingredientesQuitables`. |
+| 400 | `EXTRA_UNAVAILABLE` | Extra que no está en `extrasIds`, inactivo o no disponible. |
+| 400 | `INVALID_EXTRA_QUANTITY` | Cantidad de extra fuera de 1 a `cantidadMax`. |
+| 400 | `INVALID_ACLARACION` | `aclaracion` > 140 caracteres. |
+| 400 | `INVALID_NOMBRE` | `cliente.nombre` vacío. |
+| 400 | `INVALID_TELEFONO` | `telefono` no cumple `^549\d{10}$`. |
+| 400 | `INVALID_METODO_PAGO` | Método de pago fuera del enum. |
+| 400 | `INVALID_SLOT` | Hora inexistente para la jornada actual. |
+| 400 | `SLOT_TOO_SOON` | La franja no cumple la anticipación mínima. |
+| 400 | `CUPO_BELOW_OCUPADOS` | `PATCH /admin/slots` con `cupoMax < ocupados`. |
+| 400 | `VALIDATION_ERROR` | Cualquier otra validación de body o query. |
+| 401 | `INVALID_CREDENTIALS` | Login con usuario/contraseña inválidos o usuario inactivo. |
+| 401 | `UNAUTHORIZED` | Sin token, token vencido o `X-Print-Key` inválida. |
+| 403 | `CUSTOMER_BLOCKED` | Customer con `estado = bloqueado`. |
+| 403 | `TRANSFER_REQUIRED` | Customer `requiereTransferencia` pidiendo con `metodoPago = retiro`. |
+| 404 | `ORDER_NOT_FOUND` | Pedido inexistente (por `codigo` o `_id`). |
+| 404 | `CUSTOMER_NOT_FOUND` | Customer inexistente. |
+| 404 | `NOT_FOUND` | Cualquier otro recurso inexistente. |
+| 409 | `SLOT_FULL` | Franja sin cupo. |
+| 409 | `SLOT_CLOSED` | Franja cerrada manualmente. |
+| 409 | `INVALID_TRANSITION` | Transición de estado no permitida. |
+| 409 | `NOT_CONFIRMED` | Reimpresión de un pedido que no está `confirmado`. |
+| 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
+| 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
+
+Los `code` viven en `@blackstation/shared` como array `as const` (`ERROR_CODES`) + tipo `ErrorCode`.
 
 ---
 
@@ -520,7 +556,6 @@ Los `code` concretos se definen al implementar cada endpoint.
 |---|---|
 | Reglas de reputación | **Etapa 06.** Cómo `pedidosTotal`, `entregados` y `noShows` cambian `customers.estado`, y la forma de `settings.reputacion`. |
 | Valores por defecto de `settings` | Definidos como **provisorios** en §3.7. Confirmar horarios reales, datos de transferencia y teléfono del local con la clienta antes de producción. |
-| Formato de `codigo` | Pendiente: largo y alfabeto (propuesta: 8 caracteres alfanuméricos sin caracteres ambiguos). |
 | Asignación de `numero` | Pendiente de implementación: siguiente valor por jornada, garantizado por el índice único `(fecha, numero)` con reintento ante duplicado (o contador atómico por jornada). |
 | Última franja de la jornada | Asumido: la franja `cierra` no se ofrece (se generan mientras `hora < cierra`). Confirmar con el local. |
 | Usuarios individuales | A futuro: varios `users` y `confirmadoPor` en `orders`. |
