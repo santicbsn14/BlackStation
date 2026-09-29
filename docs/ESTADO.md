@@ -8,8 +8,8 @@
 | 01 | Modelo de datos, estados, reglas de negocio y endpoints | ✅ Cerrada |
 | 02 | Setup del monorepo: `shared`, design system base, routing, servicios y mocks | ✅ Cerrada |
 | 02b | Ajustes post-revisión: códigos de error, `abierto` en slots, listas admin envueltas | ✅ Cerrada |
-| 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | 🟡 Implementada, falta deploy Demo 1 |
-| 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Implementada |
+| 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
+| 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | Pendiente |
 | 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | Pendiente |
 | 06 | Reglas de reputación de clientes | Pendiente |
@@ -23,6 +23,14 @@
 - [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) — arquitectura CSS, tokens y reglas de estilos.
 
 ## Registro de cambios
+
+### 2026-09-29 — Etapa 03 cerrada (Demo 1)
+- Demo 1 publicada en Vercel con mocks: https://black-station-web.vercel.app/
+- La clienta aprobó el diseño.
+- `apps/web/vercel.json` ya tenía el rewrite de SPA (`/(.*)` → `/index.html`): `/checkout` y
+  `/pedido/:codigo` cargan bien al recargar. Sin cambios.
+- `DESIGN_SYSTEM.md` §10: se aclara que el rótulo del header (isotipo + "BLACK STATION" en texto)
+  sí es HTML; lo que no se recrea con texto es el logo completo en arco.
 
 ### 2026-09-28 — Etapa 03c: repaso antes de enviar + cancelación por el cliente
 - `MODELO_DATOS.md`: motivo `cliente` (§3.4), transición `pendiente` → `cancelado`/`cliente` por el

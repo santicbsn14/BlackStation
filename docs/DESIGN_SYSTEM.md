@@ -203,5 +203,7 @@ Se construyen en las Etapas 03 y 04, a medida que se necesitan:
 
 - Originales en `docs/brand/`.
 - El texto del logo está convertido a curvas (Archivo condensado): no depende de fuentes.
-- El logo nunca se recrea con texto HTML: siempre el SVG.
+- El logo completo en arco nunca se recrea con texto HTML: siempre `logo.svg`.
+- El rótulo del header público **sí** es HTML: `isotipo.svg` + "BLACK STATION" en texto con
+  Archivo condensado (eje `wdth`). Es un wordmark de navegación, no el logo.
 - **Placeholder:** se emprolija antes de producción (Etapa 08).
