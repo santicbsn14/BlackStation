@@ -105,7 +105,8 @@ export type CreateProductRequest = {
   extrasIds?: Id[];
 };
 
-export type UpdateProductRequest = Partial<CreateProductRequest>;
+/** `activo: true` reactiva un producto dado de baja (§8.2). */
+export type UpdateProductRequest = Partial<CreateProductRequest> & { activo?: boolean };
 
 // Admin: extras
 
@@ -119,7 +120,8 @@ export type CreateExtraRequest = {
   cantidadMax?: number;
 };
 
-export type UpdateExtraRequest = Partial<CreateExtraRequest>;
+/** `activo: true` reactiva un extra dado de baja (§8.2). */
+export type UpdateExtraRequest = Partial<CreateExtraRequest> & { activo?: boolean };
 
 /** PATCH /api/admin/products/:id/disponible y /api/admin/extras/:id/disponible */
 export type UpdateDisponibleRequest = {

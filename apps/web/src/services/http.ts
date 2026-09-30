@@ -47,10 +47,25 @@ type HttpOptions = {
   signal?: AbortSignal;
 };
 
-function unauthorized(): ApiError {
+/** 401 en una ruta admin: borra el token y avisa (redirige a `/admin/login`). También lo usan los mocks. */
+export function notifyUnauthorized(): void {
   clearSession();
   onUnauthorized();
+}
+
+function unauthorized(): ApiError {
+  notifyUnauthorized();
   return new ApiError(401, 'UNAUTHORIZED', 'Tu sesión venció. Volvé a ingresar.');
+}
+
+/** `{ fecha: '2026-09-29', since: undefined }` → `?fecha=2026-09-29`. Omite los vacíos. */
+export function toQueryString(query: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 }
 
 export async function http<T>(path: string, options: HttpOptions = {}): Promise<T> {

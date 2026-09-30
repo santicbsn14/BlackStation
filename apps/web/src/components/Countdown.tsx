@@ -9,11 +9,21 @@ function formatear(ms: number): string {
   return `${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
 }
 
-/** `mm:ss` de lo que resta. En `--danger` el último minuto. El cálculo lo da `useCountdown`. */
-export function Countdown({ ms }: { ms: number }) {
+type CountdownProps = {
+  ms: number;
+  /** Desde cuántos ms restantes va en `--danger`. Por defecto, el último minuto. */
+  urgenteMs?: number;
+  /** Desde cuántos ms restantes va en `--warning` (opcional). */
+  avisoMs?: number;
+};
+
+/** `mm:ss` de lo que resta. El cálculo lo da `useCountdown`. */
+export function Countdown({ ms, urgenteMs = URGENTE_MS, avisoMs }: CountdownProps) {
+  const urgente = ms <= urgenteMs;
+  const aviso = !urgente && avisoMs !== undefined && ms <= avisoMs;
   return (
     <span
-      className={['countdown', 'u-tabular', ms <= URGENTE_MS && 'is-urgent']
+      className={['countdown', 'u-tabular', urgente && 'is-urgent', aviso && 'is-warning']
         .filter(Boolean)
         .join(' ')}
       role="timer"

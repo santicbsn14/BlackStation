@@ -177,6 +177,10 @@ literales y **solo estos**:
   `--font-mono`.
 - Ancho `72mm` (área imprimible real de un papel de 80 mm a 203 dpi).
 - Hora de retiro en `--fs-4xl` bold, arriba de todo. Número de pedido grande debajo.
+- El contenido sale de `armarTicket(order)` de `@blackstation/shared`: un array de líneas
+  `{ texto, tamano, negrita, alineacion }`. La preview solo mapea `tamano` (`normal` / `grande` /
+  `gigante`), `negrita` y `alineacion` a estilos; no arma textos. El print server (Etapa 07) usa la
+  misma función, así la preview y el papel no se desalinean.
 
 ## 8. Reglas
 
@@ -191,7 +195,14 @@ Se construyen en las Etapas 03 y 04, a medida que se necesitan:
 
 `btn`, `field` / `input`, `select`, `chip` (quitar ingredientes), `stepper` (cantidad),
 `switch` (disponible), `badge` (estados), `card`, `drawer` (carrito), `modal`, `toast`,
-`table` (ABM), `countdown` (vencimiento de transferencia), `ticket`.
+`table` (ABM), `countdown` (vencimiento de transferencia), `ticket`, `empty-state` / `error-state`.
+
+- **`modal`** va sobre `<dialog>` nativo con `showModal()`: top layer (sin z-index), foco inicial,
+  Esc, backdrop y resto de la página inerte, todo del navegador. Se usa para confirmaciones y
+  formularios cortos. Los paneles de detalle (carrito, pedido, producto) siguen siendo `drawer`.
+  Un modal abierto desde un drawer no le deja pasar Esc ni Tab.
+- **`table`**: fila clickeable (Enter también) y fila atenuada (`.is-inactive`) para inactivos; los
+  controles de la fila (switch, botones) no disparan el click de la fila.
 
 ## 10. Marca
 

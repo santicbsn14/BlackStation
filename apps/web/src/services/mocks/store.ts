@@ -75,3 +75,10 @@ export function getDb(): MockDb {
 export function saveDb(): void {
   if (db) localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 }
+
+// Sincronización entre pestañas: si otra pestaña guardó el store (por ejemplo, un pedido desde la
+// app pública), se descarta la copia en memoria y la próxima lectura trae la versión nueva.
+// `key === null` es un `localStorage.clear()`.
+window.addEventListener('storage', (event) => {
+  if (event.key === STORAGE_KEY || event.key === null) db = null;
+});

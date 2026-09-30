@@ -41,6 +41,8 @@ export type AdminSlot = {
   cupoMax: number;
   ocupados: number;
   cerrada: boolean;
+  /** Documento cuya `hora` ya no está en la secuencia de franjas: se ve en el panel, no se ofrece. */
+  huerfana: boolean;
 };
 
 export type AdminSlotsResponse = {

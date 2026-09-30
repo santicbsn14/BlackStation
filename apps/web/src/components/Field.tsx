@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import './field.css';
 
 type FieldProps = {
@@ -46,11 +46,11 @@ export function fieldAria(id: string, { error, hint }: { error?: string | null; 
   } as const;
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...rest }: ComponentProps<'input'>) {
   return <input className={['input', className].filter(Boolean).join(' ')} {...rest} />;
 }
 
-export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({ className, ...rest }: ComponentProps<'textarea'>) {
   return (
     <textarea className={['input', 'textarea', className].filter(Boolean).join(' ')} {...rest} />
   );

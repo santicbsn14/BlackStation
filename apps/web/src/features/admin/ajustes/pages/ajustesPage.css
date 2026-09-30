@@ -1,0 +1,19 @@
+@layer features {
+  .adm-ajustes-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 60rem;
+  }
+
+  .adm-ajustes-page__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-ajustes-page__skeleton-bloque {
+    height: calc(var(--space-8) * 2.5);
+    border-radius: var(--radius-lg);
+  }
+}

@@ -1,0 +1,30 @@
+@layer features {
+  .adm-franjas {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-franjas__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .adm-franjas__jornada {
+    color: var(--text-muted);
+  }
+
+  .adm-franjas__lista {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .adm-franjas__skeleton {
+    height: calc(var(--tap-min) + var(--space-4));
+    border-radius: 0;
+  }
+}

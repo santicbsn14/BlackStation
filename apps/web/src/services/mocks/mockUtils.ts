@@ -1,9 +1,15 @@
 import { ERROR_STATUS, type ApiErrorBody, type ErrorCode } from '@blackstation/shared';
-import { toApiError, type ApiError } from '../http';
+import { ApiError, toApiError } from '../http';
 
-/** Latencia simulada de red: 300–600 ms. */
-export function latency(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 300));
+/**
+ * Latencia simulada de red: 300–600 ms. Sin conexión (`navigator.onLine`) falla como `http.ts`,
+ * con `NETWORK_ERROR`, para probar los estados offline también con mocks.
+ */
+export async function latency(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 300));
+  if (!navigator.onLine) {
+    throw new ApiError(0, 'NETWORK_ERROR', 'No pudimos conectarnos. Revisá tu conexión.');
+  }
 }
 
 /**

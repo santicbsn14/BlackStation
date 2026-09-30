@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
 import { router } from './app/router';
 import { ToastProvider } from './components/Toast';
+import { loginPath } from './lib/session';
 import { ApiError } from './services';
 import { setUnauthorizedHandler } from './services/http';
 
@@ -25,7 +26,8 @@ const queryClient = new QueryClient({
 
 setUnauthorizedHandler(() => {
   queryClient.clear();
-  void router.navigate('/admin/login', { replace: true });
+  const { pathname, search } = router.state.location;
+  void router.navigate(loginPath(pathname + search), { replace: true });
 });
 
 const root = document.getElementById('root');

@@ -43,3 +43,16 @@ export function saveSession({ token, expiresAt, user }: LoginResponse): void {
 export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+const LOGIN_PATH = '/admin/login';
+
+/** `/admin/login`, con `?next=` para volver a donde se estaba. */
+export function loginPath(next?: string): string {
+  return next ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}` : LOGIN_PATH;
+}
+
+/** Destino después del login: solo rutas del panel (nada externo); si no, `/admin`. */
+export function safeNextPath(next: string | null): string {
+  if (next?.startsWith('/admin') && !next.startsWith(LOGIN_PATH)) return next;
+  return '/admin';
+}

@@ -1,0 +1,73 @@
+@layer features {
+  .adm-clientes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-clientes__filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .adm-clientes__busqueda {
+    position: relative;
+    flex: 1 1 18rem;
+    color: var(--text-muted);
+
+    & > .icon {
+      position: absolute;
+      top: 50%;
+      left: var(--space-3);
+      transform: translateY(-50%);
+    }
+
+    & > .input {
+      width: 100%;
+      padding-inline-start: calc(var(--space-3) + var(--space-5));
+    }
+  }
+
+  .adm-clientes__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .adm-clientes__hint {
+    margin-block-start: calc(var(--space-2) * -1);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-clientes__cliente {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .adm-clientes__nombre {
+    font-weight: var(--fw-semibold);
+  }
+
+  .adm-clientes__telefono {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  .adm-clientes__estado {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .adm-clientes__manual {
+    display: inline-flex;
+    color: var(--text-muted);
+  }
+
+  .adm-clientes__skeleton {
+    height: var(--space-7);
+  }
+}

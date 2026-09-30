@@ -1,0 +1,48 @@
+@layer components {
+  /*
+   * Papel térmico de 80 mm: paleta propia (blanco y negro), independiente del tema.
+   * 72 mm = área imprimible. El texto `normal` entra justo en `TICKET_COLUMNAS` (48) columnas:
+   * en una monoespaciada cada carácter mide ~0.6em.
+   */
+  .ticket {
+    --ticket-columnas: 48;
+    --ticket-fs: calc(72mm / var(--ticket-columnas) / 0.6);
+
+    width: 72mm;
+    max-width: 100%;
+    padding: var(--space-3) 0;
+    margin: 0;
+    background: var(--color-white);
+    border-radius: var(--radius-sm);
+    color: var(--color-black);
+    font-family: var(--font-mono);
+    font-size: var(--ticket-fs);
+    line-height: var(--lh-tight);
+  }
+
+  .ticket__linea {
+    padding-inline: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    &[data-tamano='grande'] {
+      font-size: var(--fs-2xl);
+    }
+
+    &[data-tamano='gigante'] {
+      font-size: var(--fs-4xl);
+    }
+
+    &[data-alineacion='centro'] {
+      text-align: center;
+    }
+
+    &[data-alineacion='derecha'] {
+      text-align: end;
+    }
+
+    &[data-negrita] {
+      font-weight: var(--fw-bold);
+    }
+  }
+}

@@ -1,0 +1,97 @@
+@layer components {
+  /* Con un modal abierto la página de fondo no scrollea. */
+  html:has(.modal[open]) {
+    overflow: hidden;
+  }
+
+  /* `<dialog>` en el top layer: no necesita z-index. */
+  .modal {
+    width: calc(100% - var(--space-6));
+    max-width: 28rem;
+    max-height: 88dvh;
+    padding: 0;
+    margin: auto;
+    overflow: hidden;
+    background: var(--surface-1);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    color: var(--text);
+
+    &[open] {
+      display: flex;
+      animation: modal-in var(--dur-base) var(--ease);
+    }
+
+    &::backdrop {
+      background: color-mix(in srgb, var(--color-black) 70%, transparent);
+    }
+  }
+
+  .modal--md {
+    max-width: 34rem;
+  }
+
+  .modal__panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-2) 0 var(--space-5);
+  }
+
+  .modal__title {
+    font-size: var(--fs-xl);
+  }
+
+  .modal__close {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    margin-inline-start: auto;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-full);
+    color: var(--text);
+
+    &:hover {
+      background: var(--surface-2);
+    }
+  }
+
+  .modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-3) var(--space-5) var(--space-2);
+  }
+
+  .modal__description {
+    color: var(--text-muted);
+  }
+
+  .modal__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+  }
+
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(var(--space-2));
+    }
+  }
+}

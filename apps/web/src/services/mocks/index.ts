@@ -9,7 +9,6 @@ import {
   type CatalogResponse,
   type CreateOrderRequest,
   type CreateOrderResponse,
-  type FranjaPosible,
   type LoginRequest,
   type LoginResponse,
   type Order,
@@ -20,40 +19,18 @@ import {
   type SlotsResponse,
 } from '@blackstation/shared';
 import { latency, mockError, newCodigo, newObjectId } from './mockUtils';
+import {
+  cumpleAnticipacion,
+  franjasConCupo,
+  isForceOpen,
+  liberarCupo,
+  upsertCustomer,
+  vencerPendientes,
+  type FranjaConCupo,
+} from './common';
 import { getDb, saveDb, type MockDb } from './store';
 
-/** `VITE_MOCK_FORCE_OPEN=true`: ignora `horarios` y genera franjas desde ahora. */
-function isForceOpen(): boolean {
-  return import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
-}
-
-/** Toda cancelación libera el cupo de la franja (§4). */
-function liberarCupo(db: MockDb, order: Order, ahoraIso: string): void {
-  const slot = db.pickupSlots.find((s) => s._id === order.slotId);
-  if (!slot) return;
-  slot.ocupados = Math.max(0, slot.ocupados - 1);
-  slot.updatedAt = ahoraIso;
-}
-
-/**
- * Reemplazo del job de vencimiento (§5.4) mientras no hay API: se aplica al leer.
- * Todo pedido `pendiente` con `expiresAt ≤ ahora` pasa a `cancelado`/`vencido` y libera su cupo.
- */
-function vencerPendientes(db: MockDb, ahora: Date): void {
-  const ahoraIso = ahora.toISOString();
-  let cambio = false;
-  for (const order of db.orders) {
-    if (order.estado !== 'pendiente' || !order.expiresAt) continue;
-    if (Date.parse(order.expiresAt) > ahora.getTime()) continue;
-    order.estado = 'cancelado';
-    order.motivoCancelacion = 'vencido';
-    order.canceladoAt = ahoraIso;
-    order.updatedAt = ahoraIso;
-    liberarCupo(db, order, ahoraIso);
-    cambio = true;
-  }
-  if (cambio) saveDb();
-}
+export * from './admin';
 
 // Misma firma que services/api. Devuelven exactamente el JSON de la API (MODELO_DATOS §6–7).
 
@@ -91,30 +68,6 @@ export async function getCatalog(): Promise<CatalogResponse> {
           })),
       })),
   });
-}
-
-type FranjaConCupo = FranjaPosible & {
-  doc: PickupSlot | undefined;
-  cupoMax: number;
-  ocupados: number;
-  cerrada: boolean;
-};
-
-function franjasConCupo(db: MockDb, fecha: string, franjas: FranjaPosible[]): FranjaConCupo[] {
-  return franjas.map((f) => {
-    const doc = db.pickupSlots.find((s) => s.fecha === fecha && s.hora === f.hora);
-    return {
-      ...f,
-      doc,
-      cupoMax: doc?.cupoMax ?? db.settings.cupoMaxDefault,
-      ocupados: doc?.ocupados ?? 0,
-      cerrada: doc?.cerrada ?? false,
-    };
-  });
-}
-
-function cumpleAnticipacion(db: MockDb, inicio: Date, ahora: Date): boolean {
-  return inicio.getTime() >= ahora.getTime() + db.settings.anticipacionMinMin * 60_000;
 }
 
 export async function getSlots(): Promise<SlotsResponse> {
@@ -252,7 +205,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     );
   }
 
-  // 2. Estado del customer. El upsert y los contadores quedan para las Etapas 04/06.
+  // 2. Estado del customer. El upsert va al final, cuando el pedido se crea.
   const customer = db.customers.find((c) => c.telefono === request.cliente.telefono);
   if (customer?.estado === 'bloqueado') {
     throw mockError('CUSTOMER_BLOCKED', 'No podemos tomar tu pedido online.');
@@ -325,6 +278,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     updatedAt: createdAt,
   };
   db.orders.push(order);
+  upsertCustomer(db, order.cliente, createdAt);
   saveDb();
 
   return {

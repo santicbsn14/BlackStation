@@ -379,6 +379,9 @@ Luego el backend arma el snapshot y el `total` con precios de la DB, asigna `cod
   confirme o cancele.
 - **Job interno de la API, cada 1 minuto:** los pedidos `pendiente` con `expiresAt ≤ now` pasan a
   `cancelado` con motivo `vencido`, y se libera su cupo.
+- **Extender el plazo:** el panel puede darle más tiempo a un pedido `pendiente` de transferencia
+  que todavía no venció (`PATCH /api/admin/orders/:id/extender`, §8.1). Suma
+  `minutosTransferencia` a partir de `max(expiresAt, now)`. Sin límite de extensiones.
 - La confirmación es **siempre manual** desde el panel. El comprobante viaja por WhatsApp y el
   sistema no lo guarda.
 
@@ -442,11 +445,13 @@ Todos requieren `Authorization: Bearer <token>` (401 sin token o vencido).
 |---|---|---|
 | `GET /api/admin/orders` | Query: `fecha?` (default jornada actual), `estado?`, `since?` (ISO; devuelve solo `updatedAt > since`) | `{ orders: [order completo], serverTime }`. El panel usa `serverTime` como próximo `since`. |
 | `PATCH /api/admin/orders/:id/estado` | `{ estado, motivoCancelacion? }` (motivo obligatorio si `estado = cancelado`: `manual` o `no_retiro`) | Order actualizada. 409 si la transición no es válida. |
+| `PATCH /api/admin/orders/:id/extender` | — (sin body) | Order actualizada. `expiresAt = max(expiresAt, now) + minutosTransferencia`. Se aplica atómico con condición `{ estado: 'pendiente', expiresAt: { $ne: null } }` para no pisarse con el job de vencimiento. Sin límite de extensiones. Errores: 404 `ORDER_NOT_FOUND`; 409 `INVALID_TRANSITION` si no está `pendiente` (incluye el que ya venció); 409 `NOT_EXTENDABLE` si no tiene `expiresAt` (paga al retirar). |
 | `POST /api/admin/orders/:id/reprint` | — | `{ ok: true }`. Vuelve `impresoAt` a `null`. 409 si no está `confirmado`. |
 
 ### 8.2 Catálogo
 
 CRUD con borrado soft. `DELETE` pone `activa`/`activo` en `false`; no se borra el documento.
+Para reactivar: `PUT` con `activa: true` (categorías) o `activo: true` (productos y extras).
 
 | Método y ruta | Request | Response |
 |---|---|---|
@@ -456,12 +461,12 @@ CRUD con borrado soft. `DELETE` pone `activa`/`activo` en `false`; no se borra e
 | `DELETE /api/admin/categories/:id` | — | `{ ok: true }` (soft). |
 | `GET /api/admin/products` | — | `{ products: [product] }`. Lista completa (incluye inactivos). |
 | `POST /api/admin/products` | `{ nombre, descripcion?, categoriaId, precio, fotoUrl?, fotoPublicId?, orden?, ingredientesQuitables?, extrasIds? }` | `201` producto creado. |
-| `PUT /api/admin/products/:id` | Mismos campos, todos opcionales | Producto actualizado. |
+| `PUT /api/admin/products/:id` | Mismos campos, todos opcionales, más `activo?` | Producto actualizado. |
 | `DELETE /api/admin/products/:id` | — | `{ ok: true }` (soft). |
 | `PATCH /api/admin/products/:id/disponible` | `{ disponible }` | Producto actualizado. |
 | `GET /api/admin/extras` | — | `{ extras: [extra] }`. Lista completa (incluye inactivos). |
 | `POST /api/admin/extras` | `{ nombre, precio, cantidadMax? }` | `201` extra creado. |
-| `PUT /api/admin/extras/:id` | `{ nombre?, precio?, cantidadMax? }` | Extra actualizado. |
+| `PUT /api/admin/extras/:id` | `{ nombre?, precio?, cantidadMax?, activo? }` | Extra actualizado. |
 | `DELETE /api/admin/extras/:id` | — | `{ ok: true }` (soft). |
 | `PATCH /api/admin/extras/:id/disponible` | `{ disponible }` | Extra actualizado. |
 | `POST /api/admin/uploads/signature` | `{ folder? }` | `{ signature, timestamp, apiKey, cloudName, folder }`. El front sube directo a Cloudinary y guarda `fotoUrl` + `fotoPublicId` en el producto. |
@@ -470,7 +475,7 @@ CRUD con borrado soft. `DELETE` pone `activa`/`activo` en `false`; no se borra e
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/slots` | Query: `fecha?` (default jornada actual) | `{ fecha, slots: [{ _id?, hora, inicio, cupoMax, ocupados, cerrada }] }`. Todas las franjas posibles, existan o no como documento. |
+| `GET /api/admin/slots` | Query: `fecha?` (default jornada actual) | `{ fecha, slots: [{ _id?, hora, inicio, cupoMax, ocupados, cerrada, huerfana }] }`, ordenado por `inicio`. Unión de las franjas posibles (§5.2, existan o no como documento) y los documentos de `pickupSlots` de esa fecha. Los documentos cuya `hora` no está en la secuencia actual (por ejemplo, porque cambiaron los horarios o el intervalo) vienen con `huerfana: true`: se ven en el panel, pero no se ofrecen al cliente. El resto, `huerfana: false`. |
 | `PATCH /api/admin/slots` | `{ fecha, hora, cupoMax?, cerrada? }` | Slot actualizado (se crea si no existía). 400 si `cupoMax < ocupados`. |
 
 ### 8.4 Configuración
@@ -484,7 +489,7 @@ CRUD con borrado soft. `DELETE` pone `activa`/`activo` en `false`; no se borra e
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/customers` | Query: `telefono?` (búsqueda por prefijo o exacta, normalizado) | `{ customers: [customer] }` |
+| `GET /api/admin/customers` | Query: `q?` | `{ customers: [customer] }`, orden `ultimoPedidoAt` desc, tope 50. Si `q` tiene solo dígitos: `telefono` contiene `q`. Si no: `nombre` contiene `q`, sin distinguir mayúsculas ni tildes. `q` con menos de 2 caracteres → 400 `VALIDATION_ERROR`. Sin `q`: los 50 más recientes. |
 | `PATCH /api/admin/customers/:telefono` | `{ estado?, estadoManual? }` | Customer actualizado. Cambiar `estado` desde el panel pone `estadoManual = true`, salvo que se envíe explícitamente `estadoManual: false`. 404 si no existe. |
 
 ---
@@ -546,6 +551,7 @@ Formato único para toda respuesta de error:
 | 409 | `SLOT_CLOSED` | Franja cerrada manualmente. |
 | 409 | `INVALID_TRANSITION` | Transición de estado no permitida. |
 | 409 | `NOT_CONFIRMED` | Reimpresión de un pedido que no está `confirmado`. |
+| 409 | `NOT_EXTENDABLE` | Extender el plazo de un pedido sin `expiresAt` (paga al retirar). |
 | 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
 | 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
 

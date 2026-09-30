@@ -1,0 +1,36 @@
+@layer components {
+  .empty-state {
+    --empty-state-color: var(--text-muted);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-4);
+    text-align: center;
+  }
+
+  .empty-state__icon {
+    display: inline-grid;
+    place-items: center;
+    width: var(--space-8);
+    height: var(--space-8);
+    margin-block-end: var(--space-2);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--empty-state-color);
+    font-size: var(--fs-2xl);
+  }
+
+  .empty-state__title {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-semibold);
+  }
+
+  .empty-state__description {
+    max-width: 32rem;
+    margin-block-end: var(--space-2);
+    color: var(--text-muted);
+  }
+}

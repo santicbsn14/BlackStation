@@ -3,6 +3,10 @@
     font-weight: var(--fw-bold);
     font-variation-settings: 'wdth' var(--wdth-condensed);
 
+    &.is-warning {
+      color: var(--warning);
+    }
+
     &.is-urgent {
       color: var(--danger);
     }

@@ -25,6 +25,7 @@ export const ERROR_CODES = [
   'SLOT_CLOSED',
   'INVALID_TRANSITION',
   'NOT_CONFIRMED',
+  'NOT_EXTENDABLE',
   'ORDERS_DISABLED',
   'CLOSED',
 ] as const;
@@ -57,6 +58,7 @@ export const ERROR_STATUS = {
   SLOT_CLOSED: 409,
   INVALID_TRANSITION: 409,
   NOT_CONFIRMED: 409,
+  NOT_EXTENDABLE: 409,
   ORDERS_DISABLED: 423,
   CLOSED: 423,
 } as const satisfies Record<ErrorCode, number>;

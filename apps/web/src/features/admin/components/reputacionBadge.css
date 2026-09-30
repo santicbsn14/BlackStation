@@ -1,0 +1,11 @@
+@layer features {
+  .adm-reputacion {
+    &[data-reputacion='requiereTransferencia'] {
+      --badge-color: var(--warning);
+    }
+
+    &[data-reputacion='bloqueado'] {
+      --badge-color: var(--danger);
+    }
+  }
+}

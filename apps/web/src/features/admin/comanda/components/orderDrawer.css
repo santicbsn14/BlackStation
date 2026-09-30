@@ -1,0 +1,123 @@
+@layer features {
+  .adm-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .adm-detalle__resumen,
+  .adm-detalle__seccion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .adm-detalle__seccion {
+    padding-block-start: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+
+  .adm-detalle__titulo {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    letter-spacing: 0.08em;
+  }
+
+  .adm-detalle__fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .adm-detalle__hora {
+    font-size: var(--fs-lg);
+
+    & strong {
+      font-size: var(--fs-3xl);
+      font-variation-settings: 'wdth' var(--wdth-condensed);
+    }
+  }
+
+  .adm-detalle__meta {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-detalle__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .adm-detalle__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .adm-detalle__item-head {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-weight: var(--fw-semibold);
+  }
+
+  .adm-detalle__item-detalle {
+    padding-inline-start: var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-detalle__aclaracion {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+
+    & .icon {
+      color: var(--warning);
+    }
+  }
+
+  .adm-detalle__total {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fs-lg);
+  }
+
+  .adm-detalle__contadores {
+    display: flex;
+    gap: var(--space-5);
+
+    & dt {
+      color: var(--text-muted);
+      font-size: var(--fs-xs);
+    }
+
+    & dd {
+      font-size: var(--fs-lg);
+      font-weight: var(--fw-bold);
+    }
+  }
+
+  .adm-detalle__skeleton {
+    height: var(--space-6);
+  }
+
+  .adm-detalle__ticket {
+    align-self: center;
+  }
+
+  .adm-detalle__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+
+    & > :last-child {
+      flex: 1;
+    }
+  }
+}

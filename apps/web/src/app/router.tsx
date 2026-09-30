@@ -23,7 +23,7 @@ export const router = createBrowserRouter([
       {
         path: '/admin/login',
         lazy: async () => ({
-          Component: (await import('../features/admin/pages/LoginPage')).LoginPage,
+          Component: (await import('../features/admin/login/pages/LoginPage')).LoginPage,
         }),
       },
       {
@@ -36,32 +36,36 @@ export const router = createBrowserRouter([
               {
                 index: true,
                 lazy: async () => ({
-                  Component: (await import('../features/admin/pages/ComandaPage')).ComandaPage,
+                  Component: (await import('../features/admin/comanda/pages/ComandaPage'))
+                    .ComandaPage,
                 }),
               },
               {
                 path: 'catalogo',
                 lazy: async () => ({
-                  Component: (await import('../features/admin/pages/AdminCatalogoPage'))
+                  Component: (await import('../features/admin/catalogo/pages/AdminCatalogoPage'))
                     .AdminCatalogoPage,
                 }),
               },
               {
                 path: 'franjas',
                 lazy: async () => ({
-                  Component: (await import('../features/admin/pages/FranjasPage')).FranjasPage,
+                  Component: (await import('../features/admin/franjas/pages/FranjasPage'))
+                    .FranjasPage,
                 }),
               },
               {
                 path: 'clientes',
                 lazy: async () => ({
-                  Component: (await import('../features/admin/pages/ClientesPage')).ClientesPage,
+                  Component: (await import('../features/admin/clientes/pages/ClientesPage'))
+                    .ClientesPage,
                 }),
               },
               {
                 path: 'ajustes',
                 lazy: async () => ({
-                  Component: (await import('../features/admin/pages/AjustesPage')).AjustesPage,
+                  Component: (await import('../features/admin/ajustes/pages/AjustesPage'))
+                    .AjustesPage,
                 }),
               },
             ],

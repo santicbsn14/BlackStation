@@ -1,0 +1,61 @@
+@layer components {
+  .switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    cursor: pointer;
+
+    &.is-disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  /* El ancho útil es dos thumbs: el recorrido es exactamente un thumb. */
+  .switch__track {
+    box-sizing: content-box;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: calc(var(--space-4) * 2);
+    height: var(--space-4);
+    padding: var(--space-1);
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease);
+  }
+
+  .switch__thumb {
+    width: var(--space-4);
+    height: var(--space-4);
+    background: var(--text-muted);
+    border-radius: var(--radius-full);
+    transition:
+      transform var(--dur-fast) var(--ease),
+      background-color var(--dur-fast) var(--ease);
+  }
+
+  .switch__input:checked + .switch__track {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .switch__input:checked + .switch__track > .switch__thumb {
+    background: var(--text-on-accent);
+    transform: translateX(var(--space-4));
+  }
+
+  .switch__input:focus-visible + .switch__track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .switch__label {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+  }
+}

@@ -1,0 +1,65 @@
+@layer features {
+  .adm-plazo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .adm-plazo__texto {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+
+    & .countdown {
+      color: var(--text);
+      font-size: var(--fs-lg);
+    }
+
+    & .countdown.is-warning {
+      color: var(--warning);
+    }
+
+    & .countdown.is-urgent {
+      color: var(--danger);
+    }
+  }
+
+  .adm-plazo__acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+
+    & > * {
+      flex: 1 1 auto;
+      font-size: var(--fs-sm);
+    }
+  }
+
+  .adm-impresion {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--warning);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+
+    &[data-impreso='true'] {
+      color: var(--success);
+    }
+  }
+
+  .adm-estado-final {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .adm-estado-final__motivo {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+}

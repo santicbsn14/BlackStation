@@ -95,8 +95,8 @@ apps/web/src/
 │   ├── index.ts            ← exporta api o mocks según VITE_USE_MOCKS
 │   ├── api/                ← implementación real
 │   └── mocks/              ← implementación mock + data/*.json + store
-├── hooks/                  ← genéricos (usePolling, useCountdown)
-└── lib/                    ← helpers solo de front (links wa.me, plantillas de mensajes)
+├── hooks/                  ← genéricos (useAhora, useCountdown, useBeep, useDocumentTitle, useDebouncedValue)
+└── lib/                    ← helpers solo de front (wa.me, plantillas, hora, teléfono, storage, sesión)
 ```
 
 - Cada feature tiene `pages/`, `components/`, `hooks/` y su CSS (`pub-*` / `adm-*`).
@@ -142,8 +142,10 @@ Flujo obligatorio: **componente → hook de la feature → TanStack Query → se
 - Devuelven **exactamente el JSON de la API** (`MODELO_DATOS.md` §6–9): `_id` string, fechas ISO,
   precios enteros, mismos nombres de campos.
 - Store en memoria persistido en `localStorage` (`bs-mock-db`), así un pedido creado se puede
-  consultar por `codigo` después de recargar.
-- Latencia simulada (300–600 ms).
+  consultar por `codigo` después de recargar. Se sincroniza entre pestañas con el evento `storage`
+  (un pedido de la app pública aparece en la comanda abierta en otra pestaña).
+- Rutas admin sin token o con token vencido → 401 `UNAUTHORIZED`, con el mismo manejo que `http.ts`.
+- Latencia simulada (300–600 ms). Con `navigator.onLine` en `false` fallan con `NETWORK_ERROR`, como `http.ts`.
 - Errores con el mismo formato y status que la API (400, 401, 403, 404, 409, 423).
 - Los fixtures de `settings` usan los defaults de `MODELO_DATOS.md` §3.7.
 
@@ -152,11 +154,13 @@ Flujo obligatorio: **componente → hook de la feature → TanStack Query → se
 - Carrito: Context + `useReducer`, persistido en `localStorage` (`bs-cart`). Guarda solo
   `productoId`, `cantidad`, `quitados`, `extras[{ extraId, cantidad }]`. Precio y disponibilidad
   se recalculan siempre contra el catálogo.
-- Token admin: `localStorage` (`bs-token`) + `expiresAt`.
+- Token admin: `localStorage` (`bs-token`) + `expiresAt`. Al vencer, el panel cierra la sesión y vuelve al
+  login con `?next=`.
 - Cliente del checkout: `localStorage` (`bs-cliente`) con `{ nombre, caracteristica, numero }`, para
   precargar el formulario.
 - Pedido en curso: `localStorage` (`bs-pedido-activo`) con `{ codigo }`. Se borra cuando el pedido llega a
   un estado final (o ya no existe).
+- Sonido de la comanda: `localStorage` (`bs-sonido`), preferencia on/off del aviso de pedido nuevo.
 
 ### Variables de entorno
 
@@ -165,6 +169,7 @@ Flujo obligatorio: **componente → hook de la feature → TanStack Query → se
 | `VITE_API_URL` | Base URL de la API. |
 | `VITE_USE_MOCKS` | `true` = usa `services/mocks`. |
 | `VITE_MOCK_FORCE_OPEN` | Solo mocks: ignora `horarios` y genera franjas desde ahora (para desarrollar de día). |
+| `VITE_MOCK_SIMULAR` | Solo mocks: con el panel abierto, simula un pedido cada 30–60 s (demo). |
 
 ## packages/shared
 
@@ -175,7 +180,7 @@ packages/shared/src/
 ├── transitions.ts    ← tabla de transiciones + puedeTransicionar()
 ├── constants.ts      ← ZONA_HORARIA, ACLARACION_MAX, etc.
 ├── types/            ← common, catalog, orders, slots, customers, settings, auth
-└── utils/            ← telefono, precio, pedido, jornada (+ tests *.test.ts)
+└── utils/            ← telefono, precio, pedido, jornada, ticket (+ tests *.test.ts)
 ```
 
 - Los tipos son el **JSON de la API**, no el documento de Mongo.

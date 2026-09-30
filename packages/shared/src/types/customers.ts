@@ -16,7 +16,8 @@ export type Customer = {
 };
 
 export type AdminCustomersQuery = {
-  telefono?: string;
+  /** Solo dígitos: busca en `telefono`. Si no: en `nombre` (sin mayúsculas ni tildes). Mínimo 2 caracteres. */
+  q?: string;
 };
 
 export type AdminCustomersResponse = {

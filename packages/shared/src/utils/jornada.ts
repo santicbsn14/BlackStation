@@ -145,6 +145,18 @@ export function getJornada(config: ConfigJornada, ahora: Date, forzarAbierto = f
   };
 }
 
+/**
+ * Franjas posibles de la jornada `fecha` (`YYYY-MM-DD`) según el horario de ese día de la semana,
+ * sin importar si es la jornada actual. Vacío si ese día no está activo.
+ */
+export function getFranjasDeFecha(config: ConfigJornada, fecha: string): FranjaPosible[] {
+  const [y = 0, m = 1, d = 1] = fecha.split('-').map(Number);
+  const dia = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const horario = config.horarios.find((h) => h.dia === dia);
+  if (!horario?.activo) return [];
+  return franjasDelHorario(fecha, horario, config.intervaloMin);
+}
+
 export type ProximaApertura = {
   /** 0 = domingo … 6 = sábado. */
   dia: number;

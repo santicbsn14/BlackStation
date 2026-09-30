@@ -1,0 +1,134 @@
+@layer features {
+  .adm-order {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-inline-start: var(--space-1) solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: border-color var(--dur-base) var(--ease);
+
+    &:hover {
+      border-color: var(--border-strong);
+    }
+
+    &[data-estado='pendiente'] {
+      border-inline-start-color: var(--estado-pendiente);
+    }
+
+    &[data-estado='confirmado'] {
+      border-inline-start-color: var(--estado-confirmado);
+    }
+
+    &[data-estado='entregado'] {
+      border-inline-start-color: var(--estado-entregado);
+    }
+
+    &[data-estado='cancelado'] {
+      border-inline-start-color: var(--estado-cancelado);
+    }
+
+    /* Pedido nuevo: borde de acento con pulso (se anula con prefers-reduced-motion). */
+    &.is-nuevo {
+      border-color: var(--accent);
+      animation: adm-order-pulso 1.2s var(--ease) infinite;
+    }
+  }
+
+  @keyframes adm-order-pulso {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 var(--color-orange-soft);
+    }
+
+    50% {
+      box-shadow: 0 0 0 var(--space-2) var(--color-orange-soft);
+    }
+  }
+
+  .adm-order__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .adm-order__numero {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    font-size: var(--fs-3xl);
+    font-weight: var(--fw-bold);
+    font-variation-settings: 'wdth' var(--wdth-condensed);
+    line-height: var(--lh-tight);
+    cursor: pointer;
+  }
+
+  .adm-order__nuevo {
+    padding: var(--space-1) var(--space-2);
+    background: var(--accent);
+    border-radius: var(--radius-full);
+    color: var(--text-on-accent);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    text-transform: uppercase;
+  }
+
+  .adm-order__hora {
+    margin-inline-start: auto;
+    font-size: var(--fs-3xl);
+    font-weight: var(--fw-bold);
+    font-variation-settings: 'wdth' var(--wdth-condensed);
+    line-height: var(--lh-tight);
+  }
+
+  .adm-order__cliente {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .adm-order__nombre {
+    font-weight: var(--fw-semibold);
+  }
+
+  .adm-order__metodo[data-metodo='transferencia'] {
+    --badge-color: var(--accent);
+  }
+
+  .adm-order__total {
+    margin-inline-start: auto;
+    font-weight: var(--fw-bold);
+  }
+
+  .adm-order__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-order__mas {
+    color: var(--text-muted);
+  }
+
+  .adm-order__aclaracion {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    color: var(--warning);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-order__aclaracion-texto {
+    overflow: hidden;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

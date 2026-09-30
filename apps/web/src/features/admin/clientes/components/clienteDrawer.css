@@ -1,0 +1,42 @@
+@layer features {
+  .adm-cliente {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-cliente__fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .adm-cliente__manual {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-cliente__meta {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-cliente__contadores {
+    display: flex;
+    gap: var(--space-6);
+
+    & dt {
+      color: var(--text-muted);
+      font-size: var(--fs-xs);
+    }
+
+    & dd {
+      font-size: var(--fs-2xl);
+      font-weight: var(--fw-bold);
+    }
+  }
+}

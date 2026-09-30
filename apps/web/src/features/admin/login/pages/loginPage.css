@@ -1,0 +1,57 @@
+@layer features {
+  .adm-login {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: var(--space-4);
+  }
+
+  .adm-login__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 24rem;
+    padding: var(--space-6);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .adm-login__logo {
+    width: 12rem;
+    margin-inline: auto;
+  }
+
+  .adm-login__title {
+    color: var(--text-muted);
+    font-size: var(--fs-lg);
+    text-align: center;
+    letter-spacing: 0.2em;
+  }
+
+  .adm-login__password {
+    position: relative;
+
+    & .input {
+      padding-inline-end: calc(var(--tap-min) + var(--space-1));
+    }
+  }
+
+  .adm-login__ver {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: inline-grid;
+    place-items: center;
+    width: var(--tap-min);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}

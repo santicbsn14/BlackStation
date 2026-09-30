@@ -7,3 +7,4 @@ export * from './utils/jornada';
 export * from './utils/pedido';
 export * from './utils/precio';
 export * from './utils/telefono';
+export * from './utils/ticket';

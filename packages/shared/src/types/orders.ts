@@ -123,6 +123,9 @@ export type UpdateOrderEstadoRequest =
 
 export type UpdateOrderEstadoResponse = Order;
 
+/** PATCH /api/admin/orders/:id/extender (sin body). */
+export type ExtendOrderResponse = Order;
+
 export type ReprintOrderResponse = OkResponse;
 
 // Print server

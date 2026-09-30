@@ -1,0 +1,156 @@
+@layer features {
+  .adm-comanda {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-comanda__aviso,
+  .adm-comanda__offline {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid;
+    border-radius: var(--radius-md);
+    font-weight: var(--fw-semibold);
+  }
+
+  .adm-comanda__aviso {
+    min-height: var(--tap-min);
+    background: var(--color-orange-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    text-align: start;
+  }
+
+  .adm-comanda__offline {
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    border-color: var(--danger);
+    color: var(--text);
+
+    & .icon {
+      color: var(--danger);
+    }
+  }
+
+  /* Tabs debajo de lg; en notebook, las 3 columnas a la vez. */
+  .adm-comanda__tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-1);
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+
+    @media (min-width: 1024px) {
+      display: none;
+    }
+  }
+
+  .adm-comanda__tab {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-weight: var(--fw-semibold);
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &.is-active {
+      background: var(--color-orange-soft);
+      color: var(--accent);
+    }
+  }
+
+  .adm-comanda__count {
+    display: inline-grid;
+    place-items: center;
+    min-width: var(--space-5);
+    height: var(--space-5);
+    padding-inline: var(--space-1);
+    background: var(--surface-2);
+    border-radius: var(--radius-full);
+    color: var(--text);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+  }
+
+  .adm-comanda__columnas {
+    display: grid;
+    gap: var(--space-4);
+
+    @media (min-width: 1024px) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.75fr);
+      align-items: start;
+    }
+  }
+
+  .adm-comanda__columna {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-3);
+
+    &.is-active {
+      display: flex;
+    }
+
+    @media (min-width: 1024px) {
+      display: flex;
+    }
+  }
+
+  /* Finalizados: más angosta y atenuada, ya no requiere acción. */
+  .adm-comanda__columna--finalizados .adm-order {
+    padding-block: var(--space-2) var(--space-3);
+    background: transparent;
+
+    & .adm-order__numero,
+    & .adm-order__hora {
+      font-size: var(--fs-2xl);
+    }
+  }
+
+  .adm-comanda__titulo {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-xl);
+
+    @media (min-width: 1024px) {
+      display: flex;
+    }
+  }
+
+  .adm-comanda__lista {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .adm-comanda__vacia {
+    padding: var(--space-5) var(--space-4);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .adm-comanda__skeleton-titulo {
+    width: 10rem;
+    height: var(--space-6);
+  }
+
+  .adm-comanda__skeleton-card {
+    height: calc(var(--space-8) * 2.5);
+    border-radius: var(--radius-lg);
+  }
+}

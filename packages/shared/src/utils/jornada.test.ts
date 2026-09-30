@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Horario } from '../types/settings';
-import { getJornada, getProximaApertura } from './jornada';
+import { getFranjasDeFecha, getJornada, getProximaApertura } from './jornada';
 
 // Defaults de §3.7: martes a domingo 20:00–00:30, lunes inactivo.
 const horarios: Horario[] = [0, 1, 2, 3, 4, 5, 6].map((dia) => ({
@@ -90,5 +90,21 @@ describe('getProximaApertura', () => {
   it('sin días activos: null', () => {
     const cerrado = horarios.map((h) => ({ ...h, activo: false }));
     expect(getProximaApertura(cerrado, local('2026-09-29', '18:00'))).toBeNull();
+  });
+});
+
+describe('getFranjasDeFecha', () => {
+  it('genera las franjas del día de la semana de esa fecha, con cruce de medianoche', () => {
+    // 2026-09-29 es martes: 20:00–00:30 cada 15 min → 18 franjas.
+    const franjas = getFranjasDeFecha(config, '2026-09-29');
+    expect(franjas).toHaveLength(18);
+    expect(franjas[0]?.hora).toBe('20:00');
+    expect(franjas.at(-1)?.hora).toBe('00:15');
+    expect(franjas.at(-1)?.inicio.toISOString()).toBe('2026-09-30T03:15:00.000Z');
+  });
+
+  it('día inactivo: sin franjas', () => {
+    // 2026-09-28 es lunes (inactivo).
+    expect(getFranjasDeFecha(config, '2026-09-28')).toEqual([]);
   });
 });

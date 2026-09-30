@@ -1,0 +1,115 @@
+@layer features {
+  .adm-catalogo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .adm-catalogo__tabs {
+    display: flex;
+    gap: var(--space-1);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .adm-catalogo__tab {
+    min-height: var(--tap-min);
+    padding-inline: var(--space-4);
+    margin-block-end: -1px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    font-weight: var(--fw-semibold);
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &.is-active {
+      border-bottom-color: var(--accent);
+      color: var(--accent);
+    }
+  }
+
+  .adm-catalogo__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .adm-catalogo__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .adm-catalogo__grupo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .adm-catalogo__grupo-titulo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--fs-xl);
+  }
+
+  .adm-catalogo__vacio {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+  }
+
+  .adm-catalogo__foto {
+    display: block;
+    width: var(--space-7);
+    height: var(--space-7);
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+  }
+
+  .adm-catalogo__foto--vacia {
+    display: grid;
+    place-items: center;
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+
+  .adm-catalogo__nombre {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    font-weight: var(--fw-semibold);
+  }
+
+  .adm-catalogo__detalle {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-regular);
+  }
+
+  .adm-catalogo__inactivo {
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    text-transform: uppercase;
+    font-variation-settings: normal;
+  }
+
+  .adm-catalogo__skeleton-toolbar {
+    height: var(--tap-min);
+  }
+
+  .adm-catalogo__skeleton-tabla {
+    height: calc(var(--space-8) * 3);
+    border-radius: var(--radius-lg);
+  }
+}
