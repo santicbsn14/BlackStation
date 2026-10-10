@@ -178,9 +178,12 @@ literales y **solo estos**:
 - Ancho `72mm` (área imprimible real de un papel de 80 mm a 203 dpi).
 - Hora de retiro en `--fs-4xl` bold, arriba de todo. Número de pedido grande debajo.
 - El contenido sale de `armarTicket(order)` de `@blackstation/shared`: un array de líneas
-  `{ texto, tamano, negrita, alineacion }`. La preview solo mapea `tamano` (`normal` / `grande` /
-  `gigante`), `negrita` y `alineacion` a estilos; no arma textos. El print server (Etapa 07) usa la
+  `{ texto, tamano, negrita, alineacion }`. La preview solo mapea `tamano` (`normal` / `alto` /
+  `grande` / `gigante`), `negrita` y `alineacion` a estilos; no arma textos. El print server (Etapa 07) usa la
   misma función, así la preview y el papel no se desalinean.
+- `alto` = doble alto con ancho normal (ítems, quitados y extras). Mantiene las 48 columnas: la
+  preview dobla la fuente en una caja del doble de ancho con `scaleX(0.5)`, así el ancho por
+  carácter es el mismo que en `normal`. La hora de retiro sigue siendo lo más grande.
 
 ## 8. Reglas
 

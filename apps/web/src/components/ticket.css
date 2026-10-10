@@ -25,6 +25,18 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 
+    /*
+     * Doble alto, ancho normal (como `GS ! 0x01` en ESC/POS): fuente al doble en una caja del
+     * doble de ancho, aplastada a la mitad en horizontal. Cada carácter mide lo mismo que en
+     * `normal`, así que corta en las mismas 48 columnas y el alto de línea queda al doble.
+     */
+    &[data-tamano='alto'] {
+      width: 200%;
+      font-size: calc(var(--ticket-fs) * 2);
+      transform: scaleX(0.5);
+      transform-origin: left top;
+    }
+
     &[data-tamano='grande'] {
       font-size: var(--fs-2xl);
     }

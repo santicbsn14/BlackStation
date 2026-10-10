@@ -10,7 +10,7 @@
 | 02b | Ajustes post-revisión: códigos de error, `abierto` en slots, listas admin envueltas | ✅ Cerrada |
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
-| 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Lista para la Demo 2 (04a, 04b y 04c cerradas) |
+| 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
 | 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | Pendiente |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
@@ -37,6 +37,18 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-10 — Etapa 04e: productos más grandes en el ticket (cierre de Etapa 04)
+- Pedido de la clienta en la Demo 2. `TICKET_TAMANOS` suma `alto` (doble alto, ancho normal: sigue
+  en 48 columnas). `armarTicket`: ítems en `alto` + negrita; quitados y extras en `alto` sin
+  negrita. Hora, número, nombre, aclaración y pie sin cambios. Tests nuevos de tamaños y de nombre
+  largo.
+- `ticket.css`: `alto` dobla la fuente en una caja de 200 % con `scaleX(0.5)`; mismo ancho por
+  carácter que `normal`, corta en 48 columnas. `DESIGN_SYSTEM.md` §7 actualizado.
+- Etapa 04 cerrada.
+
+**Desvíos y decisiones a revisar**
+- El print server (Etapa 07) tiene que mapear `alto` a `GS ! 0x01` (solo doble alto).
 
 ### 2026-09-30 — Etapa 04d: sonido de pedido nuevo más audible
 - `hooks/useBeep`: el beep de 2 tonos senoidales pasa a 3 tonos ascendentes (784, 988 y 1319 Hz)

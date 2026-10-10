@@ -1,7 +1,11 @@
 import type { Order } from '../types/orders';
 import { formatearPrecio } from './precio';
 
-export const TICKET_TAMANOS = ['normal', 'grande', 'gigante'] as const;
+/**
+ * Tamaños de línea. `alto` es doble alto con ancho normal: mantiene las `TICKET_COLUMNAS` (48)
+ * columnas, así un nombre largo corta igual que el texto `normal`.
+ */
+export const TICKET_TAMANOS = ['normal', 'alto', 'grande', 'gigante'] as const;
 export type TicketTamano = (typeof TICKET_TAMANOS)[number];
 
 export const TICKET_ALINEACIONES = ['izquierda', 'centro', 'derecha'] as const;
@@ -37,7 +41,7 @@ function precio(monto: number): string {
 
 /**
  * Ticket para cocina, de arriba hacia abajo: hora de retiro, número, nombre, ítems (con quitados
- * y extras, sin precios), aclaración y al pie el total con `PAGADO` o `COBRAR $X`.
+ * y extras, sin precios, en doble alto), aclaración y al pie el total con `PAGADO` o `COBRAR $X`.
  */
 export function armarTicket(order: OrderTicket): TicketLinea[] {
   const lineas: TicketLinea[] = [
@@ -48,13 +52,13 @@ export function armarTicket(order: OrderTicket): TicketLinea[] {
   ];
 
   for (const item of order.items) {
-    lineas.push(linea(`${item.cantidad}× ${item.nombre}`, { negrita: true }));
+    lineas.push(linea(`${item.cantidad}× ${item.nombre}`, { tamano: 'alto', negrita: true }));
     for (const quitado of item.quitados) {
-      lineas.push(linea(`   SIN ${quitado}`));
+      lineas.push(linea(`   SIN ${quitado}`, { tamano: 'alto' }));
     }
     for (const extra of item.extras) {
       const cantidad = extra.cantidad > 1 ? ` ×${extra.cantidad}` : '';
-      lineas.push(linea(`   + ${extra.nombre}${cantidad}`));
+      lineas.push(linea(`   + ${extra.nombre}${cantidad}`, { tamano: 'alto' }));
     }
   }
 

@@ -46,6 +46,31 @@ describe('armarTicket', () => {
     expect(conPrecio).toEqual(['TOTAL $ 22.000', 'COBRAR $ 22.000']);
   });
 
+  it('ítems en doble alto y negrita; quitados y extras en doble alto sin negrita', () => {
+    const lineas = armarTicket(base);
+    const i = lineas.findIndex((l) => l.texto === '2× Lomito completo');
+    expect(lineas[i]).toMatchObject({ tamano: 'alto', negrita: true });
+    expect(lineas[i + 1]).toMatchObject({ tamano: 'alto', negrita: false });
+    expect(lineas[i + 2]).toMatchObject({ tamano: 'alto', negrita: false });
+  });
+
+  it('el resto del ticket no cambia de tamaño', () => {
+    const lineas = armarTicket({ ...base, aclaracion: 'Tocar timbre' });
+    const porTexto = (texto: string) => lineas.find((l) => l.texto === texto)?.tamano;
+    expect(porTexto('Juan')).toBe('normal');
+    expect(porTexto('ACLARACIÓN')).toBe('normal');
+    expect(porTexto('Tocar timbre')).toBe('normal');
+    expect(porTexto('TOTAL $ 22.000')).toBe('normal');
+  });
+
+  it('un nombre largo va en una sola línea alto, que corta en 48 columnas (ancho normal)', () => {
+    const nombre = 'Sándwich de milanesa napolitana con papas fritas';
+    const lineas = armarTicket({ ...base, items: [{ ...base.items[0]!, nombre }] });
+    const item = lineas.find((l) => l.texto.endsWith(nombre));
+    expect(item).toMatchObject({ texto: `2× ${nombre}`, tamano: 'alto' });
+    expect(item!.texto.length).toBeGreaterThan(TICKET_COLUMNAS / 2);
+  });
+
   it('un extra de cantidad 1 no lleva multiplicador', () => {
     const order: OrderTicket = {
       ...base,
