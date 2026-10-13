@@ -1,0 +1,52 @@
+[
+  {
+    "_id": "66f1b0000000000000000001",
+    "nombre": "Cheddar extra",
+    "precio": 1200,
+    "disponible": true,
+    "cantidadMax": 2,
+    "activo": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1b0000000000000000002",
+    "nombre": "Bacon",
+    "precio": 1500,
+    "disponible": true,
+    "cantidadMax": 2,
+    "activo": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1b0000000000000000003",
+    "nombre": "Huevo frito",
+    "precio": 900,
+    "disponible": true,
+    "cantidadMax": 2,
+    "activo": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1b0000000000000000004",
+    "nombre": "Cebolla caramelizada",
+    "precio": 800,
+    "disponible": true,
+    "cantidadMax": 1,
+    "activo": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1b0000000000000000005",
+    "nombre": "Porción de papas fritas",
+    "precio": 2800,
+    "disponible": true,
+    "cantidadMax": 1,
+    "activo": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

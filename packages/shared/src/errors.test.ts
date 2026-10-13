@@ -10,6 +10,11 @@ describe('ERROR_CODES', () => {
     expect(Object.keys(ERROR_STATUS).sort()).toEqual([...ERROR_CODES].sort());
   });
 
+  it('INTERNAL_ERROR es 500', () => {
+    expect(ERROR_STATUS.INTERNAL_ERROR).toBe(500);
+    expect(isErrorCode('INTERNAL_ERROR')).toBe(true);
+  });
+
   it('isErrorCode reconoce solo los codes definidos', () => {
     expect(isErrorCode('SLOT_FULL')).toBe(true);
     expect(isErrorCode('HTTP_ERROR')).toBe(false);

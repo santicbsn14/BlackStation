@@ -535,7 +535,7 @@ function franjasPosibles(db: MockDb, fecha: string | undefined, ahora: Date) {
 const aMinutos = (hora: string) => Number(hora.slice(0, 2)) * 60 + Number(hora.slice(3, 5));
 
 /**
- * Documento fuera de la secuencia de franjas. Con `VITE_MOCK_FORCE_OPEN` la secuencia arranca en
+ * Documento fuera de la secuencia de franjas. Con `VITE_FORCE_OPEN` la secuencia arranca en
  * "ahora" y se corre con el reloj: ahí solo es huérfana una hora que no cae en el intervalo.
  */
 function esHuerfana(db: MockDb, hora: string): boolean {

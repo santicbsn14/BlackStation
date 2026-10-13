@@ -1,0 +1,34 @@
+[
+  {
+    "_id": "66f1a0000000000000000001",
+    "nombre": "Lomitos",
+    "orden": 1,
+    "activa": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1a0000000000000000002",
+    "nombre": "Hamburguesas",
+    "orden": 2,
+    "activa": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1a0000000000000000003",
+    "nombre": "Milanesas",
+    "orden": 3,
+    "activa": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "_id": "66f1a0000000000000000004",
+    "nombre": "Bebidas",
+    "orden": 4,
+    "activa": true,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

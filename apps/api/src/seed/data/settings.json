@@ -1,0 +1,27 @@
+{
+  "_id": "66f1d0000000000000000001",
+  "horarios": [
+    { "dia": 0, "activo": true, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 1, "activo": false, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 2, "activo": true, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 3, "activo": true, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 4, "activo": true, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 5, "activo": true, "abre": "20:00", "cierra": "00:30" },
+    { "dia": 6, "activo": true, "abre": "20:00", "cierra": "00:30" }
+  ],
+  "intervaloMin": 15,
+  "cupoMaxDefault": 6,
+  "anticipacionMinMin": 30,
+  "pedidosHabilitados": true,
+  "minutosTransferencia": 15,
+  "alias": "BLACKSTATION.ALIAS",
+  "cbu": "0000000000000000000000",
+  "titular": "Titular a confirmar",
+  "telefonoLocal": "5493360000000",
+  "mensajes": {
+    "confirmacion": "¡Listo {nombre}! Tu pedido #{numero} está confirmado. Te esperamos a las {hora}. Total: {total}.",
+    "pedirTransferencia": "Hola {nombre}! Recibimos tu pedido #{numero} por {total}. Transferí al alias {alias} y mandanos el comprobante por acá antes de las {vence}, si no el pedido se cancela solo.",
+    "recordatorio": "Hola {nombre}! Te recordamos que tu pedido #{numero} es para retirar a las {hora}. ¡Te esperamos!"
+  },
+  "updatedAt": "2026-09-01T12:00:00.000Z"
+}

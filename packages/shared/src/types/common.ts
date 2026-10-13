@@ -18,4 +18,5 @@ export type ApiErrorBody = {
 
 export type OkResponse = { ok: true };
 
-export type HealthResponse = { ok: true; time: IsoDate };
+/** `GET /health`: `ok: false` (con 503) si la base no está conectada. */
+export type HealthResponse = { ok: boolean; time: IsoDate };

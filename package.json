@@ -12,6 +12,8 @@
   "scripts": {
     "dev": "npm run dev -w @blackstation/web",
     "build": "npm run build -w @blackstation/web",
+    "dev:api": "npm run dev -w @blackstation/api",
+    "build:api": "npm run build -w @blackstation/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",

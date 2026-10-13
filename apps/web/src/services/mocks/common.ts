@@ -6,9 +6,9 @@ import { saveDb, type MockDb } from './store';
 
 // Reglas compartidas por los mocks públicos y admin.
 
-/** `VITE_MOCK_FORCE_OPEN=true`: ignora `horarios` y genera franjas desde ahora. */
+/** `VITE_FORCE_OPEN=true`: ignora `horarios` y genera franjas desde ahora. */
 export function isForceOpen(): boolean {
-  return import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
+  return import.meta.env.VITE_FORCE_OPEN === 'true';
 }
 
 /** Toda cancelación libera el cupo de la franja (§4). */

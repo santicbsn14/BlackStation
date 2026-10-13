@@ -57,4 +57,8 @@ export default defineConfig(
     files: ['*.js', 'apps/*/vite.config.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    files: ['apps/api/**/*.ts'],
+    languageOptions: { globals: globals.node },
+  },
 );

@@ -28,6 +28,7 @@ export const ERROR_CODES = [
   'NOT_EXTENDABLE',
   'ORDERS_DISABLED',
   'CLOSED',
+  'INTERNAL_ERROR',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
@@ -61,6 +62,7 @@ export const ERROR_STATUS = {
   NOT_EXTENDABLE: 409,
   ORDERS_DISABLED: 423,
   CLOSED: 423,
+  INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, number>;
 
 export function isErrorCode(value: unknown): value is ErrorCode {

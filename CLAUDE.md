@@ -32,24 +32,27 @@ black-station/
 ├── docs/
 ├── apps/
 │   ├── web/                ← React + Vite: app pública + panel (/admin)
-│   ├── api/                ← Express por capas (Etapa 05, todavía no existe)
+│   ├── api/                ← Express 5 por capas + Mongoose (Etapa 05)
 │   └── print-server/       ← ESC/POS + PM2 (Etapa 07, todavía no existe)
 └── packages/
     └── shared/             ← @blackstation/shared: tipos de la API, enums, utils puras
 ```
 
 - `apps/*` nunca se importan entre sí. Lo común va a `packages/shared`.
-- `shared` se consume como **TS fuente** (sin build). La api lo bundlea con `tsup` en Etapa 05.
+- `shared` se consume como **TS fuente** (sin build). La api lo bundlea con `tsup` (`noExternal`).
 
 ### Comandos (desde la raíz)
 
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Levanta `apps/web`. |
-| `npm run build` | Build de `apps/web`. |
+| `npm run dev:api` | Levanta `apps/api` con `tsx watch` y `apps/api/.env`. |
+| `npm run build` | Build de `apps/web` (es el que usa Vercel; no suma la api). |
+| `npm run build:api` | Build de `apps/api` con tsup a `apps/api/dist`. |
+| `npm run seed -w @blackstation/api` | Settings + usuario admin (idempotente). `-- --demo` suma el catálogo de prueba. |
 | `npm run typecheck` | `tsc --noEmit` en todos los workspaces. |
 | `npm run lint` | ESLint en todo el repo. |
-| `npm run test` | Vitest (hoy: `packages/shared`). |
+| `npm run test` | Vitest (`packages/shared` y `apps/api`, este con mongodb-memory-server). |
 | `npm run format` | Prettier. |
 
 ## TypeScript
@@ -168,8 +171,50 @@ Flujo obligatorio: **componente → hook de la feature → TanStack Query → se
 |---|---|
 | `VITE_API_URL` | Base URL de la API. |
 | `VITE_USE_MOCKS` | `true` = usa `services/mocks`. |
-| `VITE_MOCK_FORCE_OPEN` | Solo mocks: ignora `horarios` y genera franjas desde ahora (para desarrollar de día). |
+| `VITE_FORCE_OPEN` | Mocks: ignora `horarios` y genera franjas desde ahora (para desarrollar de día). Con la API real indica que la API corre con `FORCE_OPEN`. En ambos modos marca `jornadaForzada`. |
 | `VITE_MOCK_SIMULAR` | Solo mocks: con el panel abierto, simula un pedido cada 30–60 s (demo). |
+
+## apps/api
+
+```
+apps/api/src/
+├── index.ts          ← valida env, conecta Mongo, listen; SIGTERM/SIGINT cierran server y conexión
+├── app.ts            ← createApp() sin listen (lo usan los tests con supertest)
+├── config/env.ts     ← zod sobre process.env; si falta algo no arranca y dice qué
+├── db/connect.ts
+├── models/           ← un archivo por colección, tipos con InferSchemaType
+├── routes/           ← solo montan path + middlewares + controller
+├── controllers/      ← validan (validate + zod) y llaman al service
+├── services/         ← reglas de negocio
+├── validators/       ← schemas zod de body/query/params
+├── mappers/          ← documento de Mongo → tipo de shared
+├── middlewares/      ← errorHandler, notFound, validate
+├── jobs/
+├── lib/              ← AppError, clock (now()), texto (normalizarBusqueda, escaparRegex)
+└── seed/             ← index.ts (CLI) + runSeed.ts + data/*.json (copias de los mocks)
+```
+
+- Flujo: **route → controller (valida) → service (reglas) → model**. El service devuelve tipos de
+  `@blackstation/shared` vía mappers.
+- Los services **nunca** devuelven documentos de Mongo.
+- Errores: `throw new AppError(code, message)`; el status sale de `ERROR_STATUS`. El `errorHandler`
+  responde siempre `{ error: { code, message } }` (§10); lo no previsto es 500 `INTERNAL_ERROR` sin detalle.
+- "Ahora" siempre con `now()` de `lib/clock.ts`, nunca `new Date()` directo.
+- `customers.nombreBusqueda` se setea explícito en el service en toda escritura que toque `nombre`.
+
+### Variables de entorno
+
+| Variable | Uso |
+|---|---|
+| `NODE_ENV` | `development` \| `test` \| `production`. |
+| `PORT` | Default 3000. |
+| `MONGODB_URI` | Atlas (`blackstation-dev` en desarrollo). |
+| `JWT_SECRET` | Mínimo 32 caracteres. |
+| `PRINT_KEY` | Clave del print server. Mínimo 32 caracteres. |
+| `CORS_ORIGINS` | Orígenes permitidos, separados por comas. |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Imágenes. |
+| `FORCE_OPEN` | Default `false`. Ignora horarios; con `NODE_ENV=production` no arranca. |
+| `SEED_ADMIN_USUARIO`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NOMBRE` | Solo el seed (las valida él). |
 
 ## packages/shared
 

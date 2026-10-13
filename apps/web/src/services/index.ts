@@ -51,10 +51,11 @@ export const startSimulador: () => () => void =
   USE_MOCKS && import.meta.env.VITE_MOCK_SIMULAR === 'true' ? startMockSimulador : () => () => {};
 
 /**
- * Solo mocks con `VITE_MOCK_FORCE_OPEN=true`: la jornada ignora los horarios, igual que el mock.
- * El panel la calcula con esto para pedir la misma `fecha`. Con la API real, `false`.
+ * `VITE_FORCE_OPEN=true`: la jornada ignora los horarios. Con mocks, igual que el mock; con la API
+ * real, indica que la API corre con `FORCE_OPEN`. El panel la calcula con esto para pedir la misma
+ * `fecha`.
  */
-export const jornadaForzada: boolean = USE_MOCKS && import.meta.env.VITE_MOCK_FORCE_OPEN === 'true';
+export const jornadaForzada: boolean = import.meta.env.VITE_FORCE_OPEN === 'true';
 
 export { ApiError } from './http';
 export type { ProductPhoto } from './types';

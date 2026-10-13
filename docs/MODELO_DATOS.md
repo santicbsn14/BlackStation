@@ -58,7 +58,8 @@ erDiagram
   cambia el producto o el extra, el pedido no se modifica. Las referencias (`productoId`,
   `extraId`) quedan solo para trazabilidad.
 - `orders` ↔ `customers` se vinculan por `cliente.telefono` (no por ObjectId).
-- `settings` y `users` no tienen relaciones con otras colecciones.
+- `settings`, `users` y `counters` no tienen relaciones con otras colecciones (`counters` solo
+  guarda el último `numero` por jornada).
 
 ---
 
@@ -116,7 +117,7 @@ erDiagram
 |---|---|---|---|---|
 | `_id` | ObjectId | sí | auto | Uso interno y panel. |
 | `codigo` | string | sí | generado | Aleatorio, único, no adivinable: 8 caracteres del alfabeto `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (sin `0`, `O`, `1`, `I`, `L`). Identifica el pedido en el seguimiento público (`/pedido/:codigo`). |
-| `numero` | number (entero) | sí | generado | Correlativo que se reinicia por jornada (1, 2, 3…). Es el número que ve el cliente y el local. |
+| `numero` | number (entero) | sí | generado | Correlativo que se reinicia por jornada (1, 2, 3…). Es el número que ve el cliente y el local. Se asigna con el contador de [`counters`](#39-counters). |
 | `fecha` | string `YYYY-MM-DD` | sí | — | Jornada operativa del pedido. |
 | `cliente` | object | sí | — | |
 | `cliente.nombre` | string | sí | — | |
@@ -202,9 +203,13 @@ Si no existe documento, la franja se considera con `ocupados = 0`, `cupoMax = cu
 | `estado` | enum `normal` \| `requiereTransferencia` \| `bloqueado` | sí | `normal` | |
 | `estadoManual` | boolean | sí | `false` | Si es `true`, las reglas automáticas de reputación no modifican `estado`. |
 | `ultimoPedidoAt` | Date | no | `null` | |
+| `nombreBusqueda` | string | sí | — | **Interno, no se expone en la API.** `nombre` en minúsculas y sin tildes (NFD + quitar diacríticos). Lo usa la búsqueda por nombre (§8.5). |
 | `createdAt` / `updatedAt` | Date | sí | auto | |
 
 **Índices:** `telefono` único.
+
+`nombreBusqueda` se setea en **toda escritura que toque `nombre`**, explícito en el service (no con
+un hook de `save`: los `findOneAndUpdate` no lo disparan).
 
 **Eventos que lo actualizan:**
 
@@ -291,6 +296,24 @@ Existe un solo documento. Se crea por seed.
 
 Hoy hay un solo usuario compartido creado por seed. El modelo admite usuarios individuales
 a futuro; en ese caso se agregaría `confirmadoPor` (ref `users`) en `orders`.
+
+### 3.9 `counters`
+
+Contadores atómicos. Hoy solo se usa para `orders.numero`.
+
+| Campo | Tipo | Req. | Default | Notas |
+|---|---|---|---|---|
+| `_id` | string | sí | — | `orders:<fecha>` (ej. `orders:2026-10-10`): un contador por jornada. |
+| `seq` | number (entero) | sí | — | Último `numero` asignado en esa jornada. |
+
+**Índices:** ninguno adicional (`_id`).
+
+**Asignación de `numero`:**
+1. `findOneAndUpdate({ _id: 'orders:<fecha>' }, { $inc: { seq: 1 } }, { upsert: true, new: true })`;
+   el `numero` es el `seq` devuelto. Una jornada nueva arranca en 1.
+2. Se toma **al final** de la creación del pedido, con el cupo ya reservado (§5.3).
+3. Si el insert del pedido falla después, ese número queda salteado (aceptado).
+4. El índice único `(fecha, numero)` de `orders` queda como red de seguridad.
 
 ---
 
@@ -413,7 +436,7 @@ Sin autenticación.
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /health` | — | `{ ok: true, time }` |
+| `GET /health` | — | `{ ok: true, time }` (`time` ISO). Si Mongo no está conectado: `503 { ok: false, time }`, así el monitoreo (UptimeRobot) avisa también si se cae la base. |
 | `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Ordenado por `orden`. |
 | `GET /api/slots` | — | `{ fecha, abierto, slots: [{ hora, inicio, disponibles }] }`. `abierto` indica si hoy se pueden tomar pedidos en este momento (`pedidosHabilitados`, día activo y dentro del horario). Si es `false`, `slots` viene vacío. Si es `true`: franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
 | `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }` |
@@ -489,7 +512,7 @@ Para reactivar: `PUT` con `activa: true` (categorías) o `activo: true` (product
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/customers` | Query: `q?` | `{ customers: [customer] }`, orden `ultimoPedidoAt` desc, tope 50. Si `q` tiene solo dígitos: `telefono` contiene `q`. Si no: `nombre` contiene `q`, sin distinguir mayúsculas ni tildes. `q` con menos de 2 caracteres → 400 `VALIDATION_ERROR`. Sin `q`: los 50 más recientes. |
+| `GET /api/admin/customers` | Query: `q?` | `{ customers: [customer] }`, orden `ultimoPedidoAt` desc, tope 50. Si `q` tiene solo dígitos: `telefono` contiene `q`. Si no: `nombre` contiene `q`, sin distinguir mayúsculas ni tildes (regex sobre `nombreBusqueda` con `q` normalizado igual y escapado). `q` con menos de 2 caracteres → 400 `VALIDATION_ERROR`. Sin `q`: los 50 más recientes. |
 | `PATCH /api/admin/customers/:telefono` | `{ estado?, estadoManual? }` | Customer actualizado. Cambiar `estado` desde el panel pone `estadoManual = true`, salvo que se envíe explícitamente `estadoManual: false`. 404 si no existe. |
 
 ---
@@ -521,6 +544,7 @@ Formato único para toda respuesta de error:
 | 404 | Recurso inexistente. |
 | 409 | Conflicto: franja llena/cerrada, transición de estado inválida. |
 | 423 | Pedidos deshabilitados (`pedidosHabilitados = false` o fuera de horario). |
+| 500 | Error no previsto. |
 
 **Códigos (`code`):**
 
@@ -554,6 +578,7 @@ Formato único para toda respuesta de error:
 | 409 | `NOT_EXTENDABLE` | Extender el plazo de un pedido sin `expiresAt` (paga al retirar). |
 | 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
 | 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
+| 500 | `INTERNAL_ERROR` | Cualquier error no previsto. El `message` es genérico y nunca expone el detalle (se loguea en el servidor). |
 
 Los `code` viven en `@blackstation/shared` como array `as const` (`ERROR_CODES`) + tipo `ErrorCode`.
 
@@ -565,7 +590,7 @@ Los `code` viven en `@blackstation/shared` como array `as const` (`ERROR_CODES`)
 |---|---|
 | Reglas de reputación | **Etapa 06.** Cómo `pedidosTotal`, `entregados` y `noShows` cambian `customers.estado`, y la forma de `settings.reputacion`. |
 | Valores por defecto de `settings` | Definidos como **provisorios** en §3.7. Confirmar horarios reales, datos de transferencia y teléfono del local con la clienta antes de producción. |
-| Asignación de `numero` | Pendiente de implementación: siguiente valor por jornada, garantizado por el índice único `(fecha, numero)` con reintento ante duplicado (o contador atómico por jornada). |
+| Asignación de `numero` | ✅ Resuelto (Etapa 05a): contador atómico por jornada en [`counters`](#39-counters). |
 | Última franja de la jornada | Asumido: la franja `cierra` no se ofrece (se generan mientras `hora < cierra`). Confirmar con el local. |
 | Usuarios individuales | A futuro: varios `users` y `confirmadoPor` en `orders`. |
 | Código, schemas Mongoose, setup del monorepo | Etapa 02 en adelante. |

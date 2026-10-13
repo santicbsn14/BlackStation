@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | Pendiente |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a cerrada |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -25,7 +25,7 @@
 ## Cómo correr la Demo 2 (con mocks)
 
 1. `apps/web/.env`: `VITE_USE_MOCKS=true`, `VITE_MOCK_SIMULAR=true` y, para probar de día,
-   `VITE_MOCK_FORCE_OPEN=true` (con `false` se respetan los horarios reales: martes a domingo
+   `VITE_FORCE_OPEN=true` (con `false` se respetan los horarios reales: martes a domingo
    20:00–00:30).
 2. `npm run dev` desde la raíz.
 3. Dos pestañas del mismo navegador (comparten el store `bs-mock-db`):
@@ -37,6 +37,35 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-13 — Etapa 05a: base de la API
+- `MODELO_DATOS.md`: colección `counters` (`orders:<fecha>`, `$inc` con upsert al final de la
+  creación; un insert fallido saltea el número), `customers.nombreBusqueda` (interno, seteado en el
+  service), `GET /health` con 503 `{ ok: false }` si Mongo no está conectado, `INTERNAL_ERROR`
+  (500) en §10 y el pendiente de `numero` en §11 marcado resuelto.
+- `shared`: `INTERNAL_ERROR` en `ERROR_CODES`/`ERROR_STATUS` (+ tests). `HealthResponse.ok` pasa a
+  `boolean` para cubrir el 503.
+- `apps/api` (`@blackstation/api`): Express 5 ESM, `createApp()` sin listen, env con zod,
+  `AppError`, `clock.now()`, `normalizarBusqueda`/`escaparRegex`, `errorHandler`, `notFound`,
+  `validate`, `/health`, cierre ordenado con SIGTERM/SIGINT. Modelos de las 9 colecciones con
+  índices de §3, `nextNumero(fecha)` y seed idempotente (`--demo` con copias de los JSON de los
+  mocks, mismos `_id`). tsup a `dist/` copiando `seed/data`.
+- Raíz: `dev:api` y `build:api` (`build` sigue solo web). ESLint con globals de Node en `apps/api`.
+- Front: `VITE_MOCK_FORCE_OPEN` → `VITE_FORCE_OPEN`; `jornadaForzada` se lee en los dos modos.
+  Las entradas viejas de este registro conservan el nombre anterior.
+- Tests de la api (34): env, errores, `/health` 200/503, índices únicos, `nextNumero` secuencial y
+  en paralelo, texto y seed. typecheck, lint, test, `build` y `build:api` pasan.
+
+**Desvíos y decisiones a revisar**
+- Los tests de la api están en `apps/api/test/` (no en `src/`), con un `globalSetup` que levanta
+  un solo mongodb-memory-server para todas las suites.
+- `seed/data/settings.json` también se copió de los mocks: es la fuente de los defaults de §3.7 que
+  usa el seed para crear `settings`.
+- El seed valida solo sus variables (`MONGODB_URI` + `SEED_ADMIN_*`), no el env completo de la API.
+- **Sin verificar:** `npm run dev:api` contra Atlas `blackstation-dev` (no hay `apps/api/.env` con
+  la URI real) y la prueba manual de la web con mocks y `VITE_FORCE_OPEN=true` (el cambio es solo el
+  nombre de la variable; typecheck y build pasan).
+- Versiones: Express 5, Mongoose 9, zod 4, bcryptjs 3 (trae sus tipos, sin `@types/bcryptjs`).
 
 ### 2026-10-10 — Etapa 04e: productos más grandes en el ticket (cierre de Etapa 04)
 - Pedido de la clienta en la Demo 2. `TICKET_TAMANOS` suma `alto` (doble alto, ancho normal: sigue
