@@ -188,9 +188,9 @@ apps/api/src/
 ├── services/         ← reglas de negocio
 ├── validators/       ← schemas zod de body/query/params
 ├── mappers/          ← documento de Mongo → tipo de shared
-├── middlewares/      ← errorHandler, notFound, validate
+├── middlewares/      ← errorHandler, notFound, validate, requireAdmin (JWT), requirePrintKey (X-Print-Key)
 ├── jobs/
-├── lib/              ← AppError, clock (now()), texto (normalizarBusqueda, escaparRegex)
+├── lib/              ← AppError, clock (now()), texto (normalizarBusqueda, escaparRegex), loginLimiter
 └── seed/             ← index.ts (CLI) + runSeed.ts + data/*.json (copias de los mocks)
 ```
 
@@ -253,3 +253,4 @@ Commits cortos en español con prefijo: `feat:`, `fix:`, `docs:`, `chore:`, `ref
 - `npm run typecheck`, `npm run lint` y `npm run test` pasan.
 - `npm run build` pasa.
 - `docs/ESTADO.md` actualizado.
+- Commit con prefijo y `git push` a `main` (nunca commitear `.env`).

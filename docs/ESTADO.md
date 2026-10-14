@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a cerrada |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a y 05b cerradas |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -37,6 +37,44 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-14 — Etapa 05b: auth y settings
+- `MODELO_DATOS.md`: §7 (body del login, hash fijo, `expiresAt`, límite de 10 fallos por IP en
+  15 min con 429 + `Retry-After`, `requireAdmin` sin consultar la base), §8.4 (tabla de reglas del
+  `PUT`, `reputacion` ignorada hasta la Etapa 06, 500 sin documento), §6 (recorte de
+  `public-settings`), §9 (comparación en tiempo constante) y §10 (`TOO_MANY_ATTEMPTS`, 429).
+- `shared`: `TOO_MANY_ATTEMPTS` en `ERROR_CODES`/`ERROR_STATUS` (+ test).
+- `apps/api`: `POST /api/auth/login`, `GET /api/public-settings`, `GET`/`PUT /api/admin/settings`.
+  `services/auth` (bcrypt + JWT HS256 12 h con `iat` de `now()`), `lib/loginLimiter`,
+  `middlewares/requireAdmin` (deja `res.locals.auth` tipado vía `Express.Locals`) y
+  `requirePrintKey`, `mappers/settings`, `validators/{auth,settings}`, `services/settings`,
+  controllers y routes (`/api/auth`, `/api` público, `/api/admin` con `requireAdmin` en todo el
+  router).
+- Tests de la api: 91 (+57) — login, límite (HTTP y unitario del limiter), `requireAdmin`,
+  `requirePrintKey`, public/admin settings, cada regla del `PUT` con su mensaje exacto, `reputacion`
+  preservada, `cupoMaxDefault` sin tocar franjas y 500 sin documento. typecheck, lint, test, `build`
+  y `build:api` pasan.
+- Probado contra Atlas `blackstation-dev` con `npm run dev:api`: `/health`, `public-settings`, login
+  con el usuario del seed, `GET`/`PUT` de settings (válido e inválido) y preflight CORS desde
+  `localhost:5173`.
+
+**Desvíos y decisiones a revisar**
+- `errorHandler`: un issue de zod con `code: 'custom'` se responde con su mensaje tal cual (sin
+  `Datos inválidos. campo:`). Las reglas con mensaje para el usuario se escriben con
+  `regla(check, mensaje)` de `validators/common.ts` (archivo no listado en el brief). Así el `PUT`
+  devuelve los mismos mensajes que `validarSettings` de los mocks. Los errores genéricos de zod
+  siguen con prefijo.
+- `loginLimiter` expone también `barrer()` (lo usa el `setInterval`) y `createLoginLimiter()` para
+  testearlo aislado; la app usa la instancia `loginLimiter`.
+- Un 400 de validación en el login no cuenta como fallo para el límite.
+- El `PUT` setea `updatedAt` con `now()` (con `timestamps: false` en esa update) para respetar el
+  reloj de la API; los timestamps automáticos de Mongoose usan `new Date()`.
+- Login sin body (`undefined`) responde 400 como body vacío.
+- **Sin verificar en el navegador:** el login del panel y `/admin/ajustes` con `VITE_USE_MOCKS=false`.
+  Se probaron los mismos endpoints y el preflight CORS por HTTP, no la UI.
+- El `PUT` de prueba contra `blackstation-dev` guardó los mismos valores: solo cambió `updatedAt`.
+- `prettier --check .` marca `seed/runSeed.ts` y `test/models.test.ts` (vienen de la 05a, fuera de
+  este alcance). Se arreglan con `npm run format`.
 
 ### 2026-10-13 — Etapa 05a: base de la API
 - `MODELO_DATOS.md`: colección `counters` (`orders:<fecha>`, `$inc` con upsert al final de la

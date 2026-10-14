@@ -27,6 +27,8 @@ function toResponse(err: unknown): ErrorResponse {
 
   if (err instanceof ZodError) {
     const issue = err.issues[0];
+    // Las reglas propias (`regla()` de validators/common) ya traen el mensaje para el usuario.
+    if (issue?.code === 'custom') return response('VALIDATION_ERROR', issue.message);
     const campo = issue && issue.path.length > 0 ? `${issue.path.join('.')}: ` : '';
     return response('VALIDATION_ERROR', `Datos inválidos. ${campo}${issue?.message ?? ''}`.trim());
   }

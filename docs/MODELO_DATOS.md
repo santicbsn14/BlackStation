@@ -439,7 +439,7 @@ Sin autenticación.
 | `GET /health` | — | `{ ok: true, time }` (`time` ISO). Si Mongo no está conectado: `503 { ok: false, time }`, así el monitoreo (UptimeRobot) avisa también si se cae la base. |
 | `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Ordenado por `orden`. |
 | `GET /api/slots` | — | `{ fecha, abierto, slots: [{ hora, inicio, disponibles }] }`. `abierto` indica si hoy se pueden tomar pedidos en este momento (`pedidosHabilitados`, día activo y dentro del horario). Si es `false`, `slots` viene vacío. Si es `true`: franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
-| `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }` |
+| `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }`. Recorte explícito de `settings` (sin `_id`, `mensajes`, `cupoMaxDefault`, etc.). Si no existe el documento `settings`: 500 `INTERNAL_ERROR` (se loguea que falta correr el seed). |
 | `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado. |
 | `GET /api/orders/:codigo` | — | `{ codigo, numero, fecha, horaRetiro, cliente: { nombre }, items, aclaracion, metodoPago, estado, motivoCancelacion, total, expiresAt, createdAt, updatedAt }`. No expone el teléfono. 404 si no existe. |
 | `POST /api/orders/:codigo/cancelar` | — (sin body) | El mismo JSON que `GET /api/orders/:codigo`, ya en `cancelado` con `motivoCancelacion: 'cliente'`. El `codigo` actúa de credencial. Solo si está `pendiente`: se aplica con condición `estado: 'pendiente'` para no pisarse con el job de vencimiento, y libera el cupo. Errores: 404 `ORDER_NOT_FOUND`; 409 `INVALID_TRANSITION` si no está `pendiente`. |
@@ -450,11 +450,38 @@ Sin autenticación.
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `POST /api/auth/login` | `{ usuario, password }` | `{ token, expiresAt, user: { _id, nombre, rol } }`. 401 si las credenciales son inválidas o el usuario está inactivo. |
+| `POST /api/auth/login` | `{ usuario, password }` | `{ token, expiresAt, user: { _id, nombre, rol } }`. 401 si las credenciales son inválidas o el usuario está inactivo. 429 si la IP llegó al tope de intentos. |
 
 - JWT enviado como `Authorization: Bearer <token>`.
 - Vence a las **12 h**. No hay refresh: al vencer, se vuelve a loguear.
 - Payload: `{ sub: userId, rol }`.
+
+**Login**
+
+- Body: `usuario` y `password` strings no vacíos; si no, 400 `VALIDATION_ERROR`.
+- Se busca el usuario por `usuario` con `activo: true` y se compara con bcrypt. Si no existe o está
+  inactivo, se compara igual contra un hash fijo (para que la demora sea la misma) y responde 401
+  `INVALID_CREDENTIALS`, sin distinguir el motivo.
+- `expiresAt` = emisión + 12 h, en ISO (coincide con el `exp` del JWT).
+
+**Límite de intentos**
+
+- 10 logins fallidos (`INVALID_CREDENTIALS`) por IP en una ventana de 15 minutos, que arranca con el
+  primer fallo.
+- Al llegar al tope, 429 `TOO_MANY_ATTEMPTS` con header `Retry-After` (segundos) hasta que se
+  cumple la ventana, aunque las credenciales sean correctas.
+- Un login exitoso resetea el contador de esa IP. Un 400 de validación no cuenta como fallo.
+- La IP es `req.ip` (con `trust proxy` en 1: la que agrega el proxy de Render).
+- El contador vive en memoria: se reinicia con cada deploy. Es aceptado porque Render Starter tiene
+  una sola instancia.
+
+**`requireAdmin`** (todo `/api/admin`)
+
+- Valida solo firma y vencimiento del JWT (HS256), sin consultar la base. `rol` tiene que ser
+  `admin`. Sin header, token mal formado, firma inválida, vencido o `rol` inválido: 401
+  `UNAUTHORIZED`.
+- Cambiar el password no invalida los tokens emitidos: vencen solos a las 12 h. Para cortar todas
+  las sesiones, se cambia `JWT_SECRET`.
 
 ---
 
@@ -508,6 +535,26 @@ Para reactivar: `PUT` con `activa: true` (categorías) o `activo: true` (product
 | `GET /api/admin/settings` | — | Documento `settings` completo. |
 | `PUT /api/admin/settings` | Documento `settings` completo (sin `_id` ni `updatedAt`) | `settings` actualizado. |
 
+Si no existe el documento `settings`, los dos responden 500 `INTERNAL_ERROR` (se loguea que falta
+correr el seed).
+
+**Validación del `PUT`** (las mismas reglas y mensajes que los mocks). Cualquier violación: 400
+`VALIDATION_ERROR` con el mensaje de la regla.
+
+| Campo | Regla |
+|---|---|
+| `horarios` | Exactamente 7. Un `dia` 0–6 cada uno, sin repetir. `activo` boolean. `abre`/`cierra` en `HH:mm` (00:00–23:59), `abre ≠ cierra`. Se guardan ordenados por `dia`. |
+| `intervaloMin` | Entero entre 5 y 120. |
+| `cupoMaxDefault` | Entero ≥ 1. Cambiarlo no modifica franjas que ya existen como documento. |
+| `anticipacionMinMin` | Entero ≥ 0. |
+| `minutosTransferencia` | Entero ≥ 1. |
+| `telefonoLocal` | Cumple `TELEFONO_REGEX` (`^549\d{10}$`). |
+| `alias`, `cbu`, `titular`, `mensajes.*` | Strings no vacíos; se guardan con trim. |
+| `pedidosHabilitados` | Boolean. |
+| `reputacion` | Hasta la Etapa 06 se **ignora**: se conserva el valor guardado. |
+
+Cualquier otro campo del body (`_id`, `updatedAt`, etc.) se ignora.
+
 ### 8.5 Clientes
 
 | Método y ruta | Request | Response |
@@ -519,7 +566,8 @@ Para reactivar: `PUT` con `activa: true` (categorías) o `activo: true` (product
 
 ## 9. Endpoints del print server
 
-Autenticados con header `X-Print-Key: <clave compartida>` (401 si falta o no coincide).
+Autenticados con header `X-Print-Key: <clave compartida>` (401 `UNAUTHORIZED` si falta o no
+coincide). La comparación es en tiempo constante: sha256 de ambos lados + `timingSafeEqual`.
 
 | Método y ruta | Request | Response |
 |---|---|---|
@@ -544,6 +592,7 @@ Formato único para toda respuesta de error:
 | 404 | Recurso inexistente. |
 | 409 | Conflicto: franja llena/cerrada, transición de estado inválida. |
 | 423 | Pedidos deshabilitados (`pedidosHabilitados = false` o fuera de horario). |
+| 429 | Demasiados logins fallidos desde la misma IP. |
 | 500 | Error no previsto. |
 
 **Códigos (`code`):**
@@ -578,6 +627,7 @@ Formato único para toda respuesta de error:
 | 409 | `NOT_EXTENDABLE` | Extender el plazo de un pedido sin `expiresAt` (paga al retirar). |
 | 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
 | 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
+| 429 | `TOO_MANY_ATTEMPTS` | Tope de logins fallidos por IP (§7). Viene con header `Retry-After` (segundos). |
 | 500 | `INTERNAL_ERROR` | Cualquier error no previsto. El `message` es genérico y nunca expone el detalle (se loguea en el servidor). |
 
 Los `code` viven en `@blackstation/shared` como array `as const` (`ERROR_CODES`) + tipo `ErrorCode`.

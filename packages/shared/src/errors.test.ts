@@ -21,3 +21,10 @@ describe('ERROR_CODES', () => {
     expect(isErrorCode(42)).toBe(false);
   });
 });
+
+describe('TOO_MANY_ATTEMPTS', () => {
+  it('es 429', () => {
+    expect(ERROR_STATUS.TOO_MANY_ATTEMPTS).toBe(429);
+    expect(isErrorCode('TOO_MANY_ATTEMPTS')).toBe(true);
+  });
+});
