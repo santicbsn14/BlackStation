@@ -58,11 +58,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   const defaults: Record<string, unknown> = z.looseObject({}).parse(leerData('settings'));
   delete defaults._id;
   delete defaults.updatedAt;
-  const settings = await SettingsModel.updateOne(
-    {},
-    { $setOnInsert: defaults },
-    { upsert: true },
-  );
+  const settings = await SettingsModel.updateOne({}, { $setOnInsert: defaults }, { upsert: true });
 
   const passwordHash = await bcrypt.hash(options.admin.password, BCRYPT_COSTO);
   await UserModel.updateOne(

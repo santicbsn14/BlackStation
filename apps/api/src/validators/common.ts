@@ -16,6 +16,12 @@ export const esEntero =
   (valor: unknown): valor is number =>
     typeof valor === 'number' && Number.isInteger(valor) && valor >= min && valor <= max;
 
+const OBJECT_ID_REGEX = /^[0-9a-f]{24}$/i;
+
+/** String con formato de ObjectId (24 hex). `isValidObjectId` de Mongoose acepta más cosas. */
+export const esObjectId = (valor: unknown): valor is string =>
+  typeof valor === 'string' && OBJECT_ID_REGEX.test(valor);
+
 export const esBooleano = (valor: unknown): valor is boolean => typeof valor === 'boolean';
 
 export const esTextoNoVacio = (valor: unknown): valor is string =>

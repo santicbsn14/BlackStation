@@ -1,12 +1,6 @@
 import { Types } from 'mongoose';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  ALL_MODELS,
-  CustomerModel,
-  OrderModel,
-  PickupSlotModel,
-  UserModel,
-} from '../src/models';
+import { ALL_MODELS, CustomerModel, OrderModel, PickupSlotModel, UserModel } from '../src/models';
 import { clearDb, useTestDb } from './db';
 
 useTestDb();
@@ -50,9 +44,7 @@ describe('índices únicos', () => {
 
   it('orders (fecha, numero)', async () => {
     await OrderModel.create(order());
-    await expect(OrderModel.create(order({ codigo: 'WXYZ6789' }))).rejects.toMatchObject(
-      duplicado,
-    );
+    await expect(OrderModel.create(order({ codigo: 'WXYZ6789' }))).rejects.toMatchObject(duplicado);
     // Mismo número en otra jornada: permitido.
     await expect(
       OrderModel.create(order({ codigo: 'WXYZ6789', fecha: '2026-10-11' })),

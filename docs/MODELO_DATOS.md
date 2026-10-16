@@ -437,7 +437,7 @@ Sin autenticación.
 | Método y ruta | Request | Response |
 |---|---|---|
 | `GET /health` | — | `{ ok: true, time }` (`time` ISO). Si Mongo no está conectado: `503 { ok: false, time }`, así el monitoreo (UptimeRobot) avisa también si se cae la base. |
-| `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Ordenado por `orden`. |
+| `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Categorías por `(orden, _id)`; dentro de cada una, productos por `(orden, _id)`; los extras de cada producto en el orden de su `extrasIds`. Las categorías activas sin productos también vienen (con `products: []`). No expone `activo`, `categoriaId`, `fotoPublicId` ni `extrasIds`. |
 | `GET /api/slots` | — | `{ fecha, abierto, slots: [{ hora, inicio, disponibles }] }`. `abierto` indica si hoy se pueden tomar pedidos en este momento (`pedidosHabilitados`, día activo y dentro del horario). Si es `false`, `slots` viene vacío. Si es `true`: franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
 | `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }`. Recorte explícito de `settings` (sin `_id`, `mensajes`, `cupoMaxDefault`, etc.). Si no existe el documento `settings`: 500 `INTERNAL_ERROR` (se loguea que falta correr el seed). |
 | `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado. |
@@ -505,21 +505,71 @@ Para reactivar: `PUT` con `activa: true` (categorías) o `activo: true` (product
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/categories` | — | `{ categories: [category] }`. Lista completa (incluye inactivas). |
+| `GET /api/admin/categories` | — | `{ categories: [category] }`. Lista completa (incluye inactivas), por `(orden, _id)`. |
 | `POST /api/admin/categories` | `{ nombre, orden? }` | `201` categoría creada. |
 | `PUT /api/admin/categories/:id` | `{ nombre?, orden?, activa? }` | Categoría actualizada. |
 | `DELETE /api/admin/categories/:id` | — | `{ ok: true }` (soft). |
-| `GET /api/admin/products` | — | `{ products: [product] }`. Lista completa (incluye inactivos). |
+| `GET /api/admin/products` | — | `{ products: [product] }`. Lista completa (incluye inactivos), por `(orden, _id)`. |
 | `POST /api/admin/products` | `{ nombre, descripcion?, categoriaId, precio, fotoUrl?, fotoPublicId?, orden?, ingredientesQuitables?, extrasIds? }` | `201` producto creado. |
 | `PUT /api/admin/products/:id` | Mismos campos, todos opcionales, más `activo?` | Producto actualizado. |
 | `DELETE /api/admin/products/:id` | — | `{ ok: true }` (soft). |
 | `PATCH /api/admin/products/:id/disponible` | `{ disponible }` | Producto actualizado. |
-| `GET /api/admin/extras` | — | `{ extras: [extra] }`. Lista completa (incluye inactivos). |
+| `GET /api/admin/extras` | — | `{ extras: [extra] }`. Lista completa (incluye inactivos), por `(createdAt, _id)`. |
 | `POST /api/admin/extras` | `{ nombre, precio, cantidadMax? }` | `201` extra creado. |
 | `PUT /api/admin/extras/:id` | `{ nombre?, precio?, cantidadMax?, activo? }` | Extra actualizado. |
 | `DELETE /api/admin/extras/:id` | — | `{ ok: true }` (soft). |
 | `PATCH /api/admin/extras/:id/disponible` | `{ disponible }` | Extra actualizado. |
 | `POST /api/admin/uploads/signature` | `{ folder? }` | `{ signature, timestamp, apiKey, cloudName, folder }`. El front sube directo a Cloudinary y guarda `fotoUrl` + `fotoPublicId` en el producto. |
+
+**Validación** (las mismas reglas y mensajes que los mocks). Cualquier violación: 400
+`VALIDATION_ERROR` con el mensaje de la regla. En el `PUT` todos los campos son opcionales y solo
+se valida y cambia lo enviado; los campos de más se ignoran.
+
+| Campo | Regla | Mensaje |
+|---|---|---|
+| `nombre` | String no vacío; se guarda con trim. En el create es obligatorio. | `Falta el nombre.` |
+| `orden` | Entero ≥ 0. Default `0`. | `El orden tiene que ser un entero mayor o igual a 0.` |
+| `precio` | Entero ≥ 0. En el create es obligatorio (`Falta el precio.`). | `El precio tiene que ser un entero mayor o igual a 0.` |
+| `activa` / `activo` (solo `PUT`) | Boolean. | `` `activa` tiene que ser true o false. `` / `` `activo` tiene que ser true o false. `` |
+| `disponible` (`PATCH .../disponible`) | Boolean. | `` `disponible` tiene que ser true o false. `` |
+| `descripcion` | String; se guarda con trim. Default `""`. | `La descripción no es válida.` |
+| `categoriaId` | Tiene que existir (puede estar inactiva). En el create es obligatorio (`Falta la categoría.`). | `La categoría no existe.` |
+| `ingredientesQuitables` | Array de strings no vacíos; se guardan con trim y sin repetidos. | `Los ingredientes quitables tienen que ser textos no vacíos.` |
+| `extrasIds` | Array; cada id tiene que existir (puede estar inactivo). Se guardan sin repetidos, en el orden recibido. | `Uno de los extras no existe.` |
+| `cantidadMax` | Entero ≥ 1. Default `1`. | `La cantidad máxima tiene que ser 1 o más.` |
+| `fotoUrl` + `fotoPublicId` | Ver **Fotos**. | `Foto inválida.` |
+
+- En el create, los obligatorios se chequean primero, en este orden: `Falta el nombre.`,
+  `Falta la categoría.`, `Falta el precio.`.
+- Un id mal formado en el body (`categoriaId`, `extrasIds`) se responde con el mismo mensaje que
+  uno inexistente.
+- La existencia de `categoriaId` y `extrasIds` se valida después del resto de las reglas.
+- `:id` inexistente o mal formado: 404 `NOT_FOUND` con `No encontramos esa categoría.`,
+  `No encontramos ese producto.` o `No encontramos ese extra.`.
+- Toda escritura (create, `PUT`, `DELETE`, `disponible`) setea `updatedAt` con la hora de la API.
+
+**Fotos**
+
+- `fotoUrl` y `fotoPublicId` van juntos: si viene uno, tiene que venir el otro, y son los dos
+  `null` o los dos string.
+- `fotoPublicId` tiene que empezar con `blackstation/products/` y `fotoUrl` con
+  `https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/`. Así nadie puede apuntar a otra cuenta ni
+  hacer borrar fotos ajenas. Si no se cumple: 400 `VALIDATION_ERROR` `Foto inválida.`.
+- Si un `PUT` cambia `fotoPublicId` (a otro valor o a `null`), después de guardar se borra la
+  anterior en Cloudinary (`image/destroy`), en segundo plano. Si el borrado falla, queda en el log y
+  no afecta la respuesta.
+- El `DELETE` (soft) no borra la foto: el producto se puede reactivar.
+- Las fotos subidas pero nunca guardadas en un producto quedan en Cloudinary (aceptado).
+
+**Firma de subida** (`POST /api/admin/uploads/signature`)
+
+- `folder` solo admite `products` (default `products`); cualquier otro valor: 400
+  `VALIDATION_ERROR` `Carpeta inválida.`. La carpeta final (la que se devuelve y se firma) es
+  `blackstation/products`.
+- `timestamp`: segundos Unix, tomados de la hora de la API.
+- `signature`: sha1 en hex de `folder=<folder>&timestamp=<timestamp>` concatenado con el api secret
+  (params ordenados alfabéticamente, como pide Cloudinary).
+- `apiKey` y `cloudName` salen del env. El secret nunca se expone.
 
 ### 8.3 Franjas
 

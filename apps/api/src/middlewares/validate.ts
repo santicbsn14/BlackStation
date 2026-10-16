@@ -23,9 +23,10 @@ export function validate<S extends Schemas>(
 ): RequestHandler {
   return async (req, res) => {
     const input: Record<string, unknown> = {};
-    if (schemas.body) input.body = schemas.body.parse(req.body);
-    if (schemas.query) input.query = schemas.query.parse(req.query);
+    // Params primero: un `:id` inválido responde 404 aunque el body también tenga errores.
     if (schemas.params) input.params = schemas.params.parse(req.params);
+    if (schemas.query) input.query = schemas.query.parse(req.query);
+    if (schemas.body) input.body = schemas.body.parse(req.body);
     await handler(input as Validated<S>, req, res);
   };
 }

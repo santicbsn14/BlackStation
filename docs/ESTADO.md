@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a y 05b cerradas |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a, 05b y 05c cerradas |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -37,6 +37,49 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-16 — Etapa 05c: catálogo y Cloudinary
+- `MODELO_DATOS.md`: §6 (órdenes `(orden, _id)` del catálogo, extras en el orden de `extrasIds`,
+  categorías sin productos, campos que no se exponen) y §8.2 (orden de las listas admin, tabla de
+  validaciones con los mensajes de los mocks, 404 por `:id`, reglas de fotos, borrado de la foto
+  vieja y firma de subida).
+- `apps/api`: `GET /api/catalog`; CRUD de `/api/admin/{categories,products,extras}` con borrado
+  soft, reactivación por `PUT` y `PATCH .../disponible`; `POST /api/admin/uploads/signature`.
+  `lib/cloudinary` (`firmarParams`, `destroyImage` con `fetch`, `esFotoPropia`), `mappers/catalog`,
+  `validators/catalog`, `services/{catalog,uploads}`, controllers y routes. Un `PUT` que cambia o
+  saca la foto borra la anterior en Cloudinary en segundo plano (si falla, solo log).
+- Tests de la api: 179 (+88) — catálogo público (igual al `getCatalog` del mock armado desde los
+  JSON del seed, filtros, órdenes, recorte), CRUD de las tres entidades, cada validación con su
+  mensaje, 404 por `:id`, 401 en las 15 rutas admin nuevas, fotos (400, destroy sí/no, destroy que
+  falla), firma contra un sha1 calculado a mano y `lib/cloudinary`. Ningún test sale a la red.
+- `npm run format` aplicado (`seed/runSeed.ts` y `test/models.test.ts`, pendiente de la 05a).
+- typecheck, lint, test, `build` y `build:api` pasan. Con `npm run dev:api` contra Atlas
+  `blackstation-dev`: `/health` y `/api/catalog` (catálogo demo, 4 categorías) responden; las rutas
+  admin sin token dan 401.
+
+**Desvíos y decisiones a revisar**
+- `middlewares/validate` valida `params` antes que `body` (antes era al revés): un `:id` inválido da
+  404 aunque el body también tenga errores, como el mock (que busca antes de validar).
+- El `:id` mal formado se rechaza con un `transform` de zod que tira `AppError('NOT_FOUND')`
+  (`idParams` en `validators/catalog`).
+- La existencia de `categoriaId`/`extrasIds` la chequea el service, después de las reglas de
+  formato: con varios errores a la vez, el mensaje puede diferir del mock (el mock chequea en orden de
+  campo). Lo mismo con `Foto inválida.` por el par `fotoUrl`/`fotoPublicId`, que se evalúa después
+  de los campos sueltos.
+- Mensaje nuevo, sin equivalente en el mock: `Carpeta inválida.` para `folder` ≠ `products`.
+- `POST` de producto ignora `activo` y `POST` de categoría ignora `activa` (no están en §8.2); el
+  mock los aceptaba en el create de productos.
+- Create, `PUT`, `DELETE` y `disponible` setean `createdAt`/`updatedAt` con `now()` (sin los
+  timestamps automáticos de Mongoose), como el `PUT` de settings.
+- La firma de subida está en `validators/catalog.ts` (`uploadSignatureBodySchema`), no en un
+  validator propio.
+- Si se cambia `CLOUDINARY_CLOUD_NAME`, los productos con fotos de la cuenta anterior no se pueden
+  editar sin sacar o reemplazar la foto (el front reenvía la foto en cada `PUT` y no pasa
+  `esFotoPropia`).
+- **Sin verificar (manual del brief):** el panel `/admin/catalogo` con `VITE_USE_MOCKS=false`
+  (crear, editar, baja, reactivar, agotado), la subida real de una foto y que la vieja desaparezca
+  de la Media Library. Hacen falta login en el navegador y las credenciales de Cloudinary de
+  `apps/api/.env`, que no leí.
 
 ### 2026-10-14 — Etapa 05b: auth y settings
 - `MODELO_DATOS.md`: §7 (body del login, hash fijo, `expiresAt`, límite de 10 fallos por IP en
