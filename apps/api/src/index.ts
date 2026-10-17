@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { EnvError, getEnv, type Env } from './config/env';
 import { connectDb, disconnectDb } from './db/connect';
+import { startVencimientoJob } from './jobs/vencimiento';
 
 function loadEnv(): Env {
   try {
@@ -32,9 +33,12 @@ const server = createApp().listen(env.PORT, (err) => {
   if (env.FORCE_OPEN) console.warn('FORCE_OPEN activo: se ignoran los horarios.');
 });
 
+const stopVencimientoJob = startVencimientoJob();
+
 // Render manda SIGTERM en cada deploy: cerrar el server y la conexión antes de salir.
 function shutdown(signal: NodeJS.Signals): void {
   console.log(`${signal} recibido, cerrando…`);
+  stopVencimientoJob();
   setTimeout(() => process.exit(1), 10_000).unref();
   server.close(() => {
     disconnectDb()

@@ -1,14 +1,10 @@
 import { TELEFONO_REGEX, type Horario, type UpdateSettingsRequest } from '@blackstation/shared';
 import { z } from 'zod';
-import { esBooleano, esEntero, esObjeto, regla, textoRequerido } from './common';
+import { esBooleano, esEntero, esHora, esObjeto, regla, textoRequerido } from './common';
 
 // §8.4. Mismas reglas y mensajes que `validarSettings` de los mocks del front.
 
-const HORA_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DIAS = 7;
-
-const esHora = (valor: unknown): valor is string =>
-  typeof valor === 'string' && HORA_REGEX.test(valor);
 
 /** Devuelve los horarios ordenados por `dia`, o el mensaje de la primera regla que no cumplen. */
 function validarHorarios(valor: unknown): Horario[] | string {

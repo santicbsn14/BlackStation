@@ -1,4 +1,9 @@
-import { calcularSubtotal, formatearPrecio, type CatalogProduct } from '@blackstation/shared';
+import {
+  calcularSubtotal,
+  formatearPrecio,
+  fotoCloudinary,
+  type CatalogProduct,
+} from '@blackstation/shared';
 import { useId, useState } from 'react';
 import { Button } from '../../../../components/Button';
 import { Chip } from '../../../../components/Chip';
@@ -113,7 +118,9 @@ function ProductoSheetAbierto({ producto, editando: editandoProp, inicial }: Abi
   return (
     <Drawer side="bottom" labelledBy={tituloId} onClose={cerrar} footer={footer}>
       <div className="pub-producto">
-        {producto.fotoUrl && <img className="pub-producto__foto" src={producto.fotoUrl} alt="" />}
+        {producto.fotoUrl && (
+          <img className="pub-producto__foto" src={fotoCloudinary(producto.fotoUrl, 800)} alt="" />
+        )}
         <div className="pub-producto__cabecera">
           <h2 id={tituloId} className="pub-producto__nombre">
             {producto.nombre}

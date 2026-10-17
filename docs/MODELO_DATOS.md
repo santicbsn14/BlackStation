@@ -392,8 +392,27 @@ Se valida, en este orden:
 5. La franja pertenece a la jornada actual y cumple la anticipación mínima.
 6. Reserva atómica del cupo (ver [pickupSlots](#35-pickupslots)).
 
+Antes del paso 1 corre el vencimiento perezoso (§5.4).
+
+**Topes anti-spam.** Se chequean después de validar el formato del body (paso 4) y antes de la
+franja (paso 5), o sea antes de reservar cupo:
+
+- **Por teléfono:** si `cliente.telefono` ya tiene 2 pedidos `pendiente` (contados en la base,
+  después del vencimiento perezoso) → 429 `TOO_MANY_ORDERS`
+  `Ya tenés 2 pedidos en curso. Esperá a que los confirmen o cancelá uno.`.
+- **Por IP:** máximo 10 pedidos **creados** por IP por hora, en una ventana que arranca con el
+  primero. El pedido 11 → 429 `TOO_MANY_ORDERS` `Hiciste muchos pedidos seguidos. Probá de nuevo más tarde.`
+  con header `Retry-After` (segundos hasta que se cumple la ventana). Solo suman los pedidos creados
+  con éxito. La IP es `req.ip` (como en §7) y el contador vive en memoria, igual que el límite de
+  logins.
+
 Luego el backend arma el snapshot y el `total` con precios de la DB, asigna `codigo` y
 `numero`, setea `expiresAt` si corresponde, crea el pedido en `pendiente` y actualiza el customer.
+
+- **`codigo`:** `crypto.randomInt` sobre el alfabeto de §3.4. Si choca con el índice único, se
+  genera otro y se reintenta el insert, hasta 5 veces.
+- **Falla después de reservar:** si algo falla entre la reserva y el insert del pedido, se libera el
+  cupo (§3.5 paso 3). El `numero` ya tomado queda salteado (§3.9).
 
 ### 5.4 Transferencia y vencimiento
 
@@ -402,6 +421,13 @@ Luego el backend arma el snapshot y el `total` con precios de la DB, asigna `cod
   confirme o cancele.
 - **Job interno de la API, cada 1 minuto:** los pedidos `pendiente` con `expiresAt ≤ now` pasan a
   `cancelado` con motivo `vencido`, y se libera su cupo.
+- **Vencimiento perezoso:** lo mismo (`vencerPendientes()`) corre además al inicio de
+  `GET /api/slots`, `POST /api/orders`, `GET /api/orders/:codigo`,
+  `POST /api/orders/:codigo/cancelar` y `GET`/`PATCH /api/admin/slots`. Así ningún pedido vencido
+  se ve ni se opera como `pendiente` mientras el job no pasa.
+- Cada pedido se vence con `findOneAndUpdate({ _id, estado: 'pendiente', expiresAt: { $lte: now } })`
+  y el cupo se libera solo si esa actualización matcheó: si el job y una request corren a la vez, el
+  cupo se libera una sola vez.
 - **Extender el plazo:** el panel puede darle más tiempo a un pedido `pendiente` de transferencia
   que todavía no venció (`PATCH /api/admin/orders/:id/extender`, §8.1). Suma
   `minutosTransferencia` a partir de `max(expiresAt, now)`. Sin límite de extensiones.
@@ -440,7 +466,7 @@ Sin autenticación.
 | `GET /api/catalog` | — | `{ categories: [{ _id, nombre, orden, products: [{ _id, nombre, descripcion, precio, fotoUrl, disponible, ingredientesQuitables, extras: [{ _id, nombre, precio, cantidadMax }] }] }] }`. Solo categorías `activa`, productos `activo` (incluye `disponible: false` para mostrar "Agotado") y extras `activo` + `disponible`. Categorías por `(orden, _id)`; dentro de cada una, productos por `(orden, _id)`; los extras de cada producto en el orden de su `extrasIds`. Las categorías activas sin productos también vienen (con `products: []`). No expone `activo`, `categoriaId`, `fotoPublicId` ni `extrasIds`. |
 | `GET /api/slots` | — | `{ fecha, abierto, slots: [{ hora, inicio, disponibles }] }`. `abierto` indica si hoy se pueden tomar pedidos en este momento (`pedidosHabilitados`, día activo y dentro del horario). Si es `false`, `slots` viene vacío. Si es `true`: franjas de la jornada actual que cumplen anticipación, no cerradas y con cupo. |
 | `GET /api/public-settings` | — | `{ pedidosHabilitados, horarios, anticipacionMinMin, minutosTransferencia, alias, cbu, titular, telefonoLocal }`. Recorte explícito de `settings` (sin `_id`, `mensajes`, `cupoMaxDefault`, etc.). Si no existe el documento `settings`: 500 `INTERNAL_ERROR` (se loguea que falta correr el seed). |
-| `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado. |
+| `POST /api/orders` | `{ cliente: { nombre, telefono }, items: [{ productoId, cantidad, quitados, extras: [{ extraId, cantidad }] }], aclaracion?, hora, metodoPago }` | `201 { codigo, numero, estado, horaRetiro, total, expiresAt }`. Errores: 400 validación, 403 customer bloqueado / requiere transferencia, 409 franja llena o cerrada, 423 pedidos deshabilitados o local cerrado, 429 topes anti-spam (§5.3). |
 | `GET /api/orders/:codigo` | — | `{ codigo, numero, fecha, horaRetiro, cliente: { nombre }, items, aclaracion, metodoPago, estado, motivoCancelacion, total, expiresAt, createdAt, updatedAt }`. No expone el teléfono. 404 si no existe. |
 | `POST /api/orders/:codigo/cancelar` | — (sin body) | El mismo JSON que `GET /api/orders/:codigo`, ya en `cancelado` con `motivoCancelacion: 'cliente'`. El `codigo` actúa de credencial. Solo si está `pendiente`: se aplica con condición `estado: 'pendiente'` para no pisarse con el job de vencimiento, y libera el cupo. Errores: 404 `ORDER_NOT_FOUND`; 409 `INVALID_TRANSITION` si no está `pendiente`. |
 
@@ -560,6 +586,10 @@ se valida y cambia lo enviado; los campos de más se ignoran.
   no afecta la respuesta.
 - El `DELETE` (soft) no borra la foto: el producto se puede reactivar.
 - Las fotos subidas pero nunca guardadas en un producto quedan en Cloudinary (aceptado).
+- **Entrega:** la API guarda y devuelve siempre la URL original. El front pide cada foto a
+  Cloudinary con `f_auto,q_auto,w_<ancho>,c_limit` (insertado después de `/upload/`, con
+  `fotoCloudinary` de `@blackstation/shared`): 400 en la card del catálogo, 800 en el detalle y 200
+  en las miniaturas del panel.
 
 **Firma de subida** (`POST /api/admin/uploads/signature`)
 
@@ -577,6 +607,21 @@ se valida y cambia lo enviado; los campos de más se ignoran.
 |---|---|---|
 | `GET /api/admin/slots` | Query: `fecha?` (default jornada actual) | `{ fecha, slots: [{ _id?, hora, inicio, cupoMax, ocupados, cerrada, huerfana }] }`, ordenado por `inicio`. Unión de las franjas posibles (§5.2, existan o no como documento) y los documentos de `pickupSlots` de esa fecha. Los documentos cuya `hora` no está en la secuencia actual (por ejemplo, porque cambiaron los horarios o el intervalo) vienen con `huerfana: true`: se ven en el panel, pero no se ofrecen al cliente. El resto, `huerfana: false`. |
 | `PATCH /api/admin/slots` | `{ fecha, hora, cupoMax?, cerrada? }` | Slot actualizado (se crea si no existía). 400 si `cupoMax < ocupados`. |
+
+Validación (los mismos mensajes que los mocks; 400 `VALIDATION_ERROR` salvo que se indique):
+
+- `fecha` (query del `GET` y body del `PATCH`): `YYYY-MM-DD` → `La fecha no es válida.`.
+- `hora`: `HH:mm` (00:00–23:59) → `La hora no es válida.`.
+- `cupoMax`: entero ≥ 0 → `El cupo tiene que ser un entero mayor o igual a 0.`.
+- `cerrada`: boolean → `` `cerrada` tiene que ser true o false. ``.
+- Si no existe el documento, se crea solo si `hora` es una franja posible de `fecha`; si no, 400
+  `INVALID_SLOT` `Esa franja no existe para esa fecha.`. Se inicializa con `cupoMaxDefault`,
+  `ocupados: 0` y `cerrada: false`.
+- El cambio de `cupoMax` se aplica con condición atómica `ocupados ≤ cupoMax` nuevo, para no
+  pisarse con una reserva. Si no matchea: 400 `CUPO_BELOW_OCUPADOS`
+  `El cupo no puede ser menor a los <ocupados> pedidos que ya tiene la franja.`.
+- Con `FORCE_OPEN`, la jornada actual sale de "ahora" (§5.2 no aplica): un documento solo es
+  `huerfana` si su `hora` no cae en el intervalo.
 
 ### 8.4 Configuración
 
@@ -642,7 +687,7 @@ Formato único para toda respuesta de error:
 | 404 | Recurso inexistente. |
 | 409 | Conflicto: franja llena/cerrada, transición de estado inválida. |
 | 423 | Pedidos deshabilitados (`pedidosHabilitados = false` o fuera de horario). |
-| 429 | Demasiados logins fallidos desde la misma IP. |
+| 429 | Demasiados logins fallidos desde la misma IP, o topes anti-spam de pedidos (§5.3). |
 | 500 | Error no previsto. |
 
 **Códigos (`code`):**
@@ -678,6 +723,7 @@ Formato único para toda respuesta de error:
 | 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
 | 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
 | 429 | `TOO_MANY_ATTEMPTS` | Tope de logins fallidos por IP (§7). Viene con header `Retry-After` (segundos). |
+| 429 | `TOO_MANY_ORDERS` | Topes anti-spam de `POST /api/orders` (§5.3): 2 pedidos `pendiente` del mismo teléfono, o 10 pedidos creados por IP en una hora (este con header `Retry-After`). |
 | 500 | `INTERNAL_ERROR` | Cualquier error no previsto. El `message` es genérico y nunca expone el detalle (se loguea en el servidor). |
 
 Los `code` viven en `@blackstation/shared` como array `as const` (`ERROR_CODES`) + tipo `ErrorCode`.

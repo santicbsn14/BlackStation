@@ -1,4 +1,10 @@
-import { formatearPrecio, type Category, type Extra, type Product } from '@blackstation/shared';
+import {
+  fotoCloudinary,
+  formatearPrecio,
+  type Category,
+  type Extra,
+  type Product,
+} from '@blackstation/shared';
 import { useState } from 'react';
 import { Button } from '../../../../components/Button';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -45,7 +51,7 @@ export function ProductosTab({
         shrink: true,
         render: (p) =>
           p.fotoUrl ? (
-            <img className="adm-catalogo__foto" src={p.fotoUrl} alt="" />
+            <img className="adm-catalogo__foto" src={fotoCloudinary(p.fotoUrl, 200)} alt="" />
           ) : (
             <span className="adm-catalogo__foto adm-catalogo__foto--vacia" aria-hidden="true">
               <Icon name="image" />

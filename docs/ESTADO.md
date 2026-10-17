@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a, 05b y 05c cerradas |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a, 05b, 05c y 05d cerradas |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -37,6 +37,55 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-17 — Etapa 05d: franjas y pedidos
+- `MODELO_DATOS.md`: §5.3 (topes anti-spam por teléfono e IP, generación del `codigo` con
+  reintentos, liberar el cupo si falla después de reservar), §5.4 (vencimiento perezoso y condición
+  para no liberar dos veces), §8.2 (entrega de fotos con `f_auto,q_auto,w_<ancho>,c_limit`), §8.3
+  (validaciones y mensajes del `PATCH`, `cupoMax` atómico, `huerfana` con `FORCE_OPEN`), §6 y §10
+  (`TOO_MANY_ORDERS`, 429).
+- `shared`: `TOO_MANY_ORDERS` en `ERROR_CODES`/`ERROR_STATUS` y `utils/foto.ts`
+  (`fotoCloudinary`), con tests. 79 tests (+7).
+- `apps/api`: `GET /api/slots`, `POST /api/orders`, `GET /api/orders/:codigo`,
+  `POST /api/orders/:codigo/cancelar`, `GET`/`PATCH /api/admin/slots`. `services/{jornada,slots,
+  orders,vencimiento}`, `jobs/vencimiento` (cada 60 s, arrancado en `index.ts` y frenado en el
+  shutdown), `lib/orderLimiter`, `mappers/{orders,slots}`, `validators/{orders,slots}`, controllers y
+  routes.
+- `apps/web`: `TOO_MANY_ORDERS` muestra su mensaje en un toast; las `<img>` de `ProductoCard` (400),
+  `ProductoSheet` (800), `ProductosTab` y `ProductoDrawer` (200) usan `fotoCloudinary`.
+- Tests de la api: 291 (+112) — franjas públicas y admin, creación con cada validación de §5.3 y su
+  mensaje, snapshot, concurrencia (5 pedidos contra cupo 2, con y sin documento previo), insert que
+  falla, `codigo` repetido, topes, seguimiento, cancelación (también dos a la vez), vencimiento
+  perezoso, `vencerPendientes()` en paralelo, el job y el limiter.
+- typecheck, lint, test, `build` y `build:api` pasan. Probado por HTTP con `FORCE_OPEN=true` contra
+  Atlas `blackstation-dev`: slots, pedido creado (número 1), seguimiento, cancelación y 409 al
+  cancelar de nuevo. Quedaron en esa base un pedido cancelado, su franja (`ocupados: 0`), el contador
+  y el customer `5493369999999` ("Prueba 05d").
+
+**Desvíos y decisiones a revisar**
+- **Orden de validación:** el controller solo normaliza la forma del body (nunca falla); los
+  chequeos con `code` específico corren en el service en el orden de §5.3 (`validarDatosPedido` vive
+  en `validators/orders`). Así un local cerrado da 423 aunque el body tenga errores, como el mock.
+- Body mal formado (no es el que manda el front): sin `items` o `items` que no es array →
+  `EMPTY_ORDER`; ítem que no es objeto o `productoId` mal formado → `PRODUCT_UNAVAILABLE`; `quitados`
+  no array → `INVALID_REMOVED`; `extras` no array o `extraId` mal formado → `EXTRA_UNAVAILABLE`;
+  `aclaracion` que no es string → `INVALID_ACLARACION` `La aclaración no es válida.` (mensaje nuevo);
+  `hora` ausente → `INVALID_SLOT`. `quitados` y `extras` ausentes cuentan como `[]`.
+- `:codigo` con formato que no es del alfabeto → 404 sin consultar la base.
+- `AppError` suma `retryAfter` opcional y el `errorHandler` pone el header `Retry-After` (el login
+  lo sigue poniendo en su controller).
+- Los topes se chequean después del paso 4 y antes del paso 5 (franja). El tope por IP no es
+  atómico: varios pedidos simultáneos de la misma IP pueden pasar el chequeo juntos (aceptado).
+- `codigo`: 1 intento + 5 reintentos si choca con el índice único; después, 500 y se libera el cupo.
+- Si el upsert del customer falla después del insert, el pedido queda creado y la respuesta es 500
+  (no se deshace el pedido).
+- `cuerpo`, `esHora` y `esFecha` pasan a `validators/common.ts` (antes en catalog/settings);
+  `findSettings` se exporta desde `services/settings`. `franjasConCupo` recibe además
+  `cupoMaxDefault`. Hay un import circular `slots` ↔ `vencimiento` (solo funciones, sin efecto).
+- `PATCH /admin/slots` valida el formato antes de vencer pendientes (el mock vence primero; sin
+  diferencia en la respuesta).
+- **Sin verificar en el navegador:** el manual del brief (pedido desde `/` con `VITE_USE_MOCKS=false`,
+  `/admin/franjas` y el peso de las fotos en Network). Se probó el flujo por HTTP, no la UI.
 
 ### 2026-10-16 — Etapa 05c: catálogo y Cloudinary
 - `MODELO_DATOS.md`: §6 (órdenes `(orden, _id)` del catálogo, extras en el orden de `extrasIds`,

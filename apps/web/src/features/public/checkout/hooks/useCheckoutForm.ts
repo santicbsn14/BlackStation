@@ -166,6 +166,8 @@ export function useCheckoutForm() {
       requestAnimationFrame(() => llevarA(CHECKOUT_IDS.bloqueado));
     } else if (CODES_CERRADO.includes(code)) {
       setCerrado(true);
+    } else if (code === 'TOO_MANY_ORDERS') {
+      toast(error.message);
     } else {
       toast('No pudimos enviar tu pedido. Probá de nuevo.');
     }

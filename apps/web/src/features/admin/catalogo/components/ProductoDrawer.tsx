@@ -1,4 +1,10 @@
-import type { Category, CreateProductRequest, Extra, Product } from '@blackstation/shared';
+import {
+  fotoCloudinary,
+  type Category,
+  type CreateProductRequest,
+  type Extra,
+  type Product,
+} from '@blackstation/shared';
 import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Button } from '../../../../components/Button';
 import { Drawer } from '../../../../components/Drawer';
@@ -159,7 +165,7 @@ export function ProductoDrawer({
           {foto ? (
             <img
               className="adm-producto__preview"
-              src={foto.fotoUrl}
+              src={fotoCloudinary(foto.fotoUrl, 200)}
               alt={`Foto de ${nombre || 'producto'}`}
             />
           ) : (

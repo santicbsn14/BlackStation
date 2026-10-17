@@ -13,7 +13,8 @@ function faltaSettings(): AppError {
   return new AppError('INTERNAL_ERROR', 'Ocurrió un error inesperado.');
 }
 
-async function findSettings(): Promise<SettingsLean> {
+/** Documento `settings` plano. Sin documento: 500 genérico (ver `faltaSettings`). */
+export async function findSettings(): Promise<SettingsLean> {
   const doc = await SettingsModel.findOne().lean<SettingsLean>();
   if (!doc) throw faltaSettings();
   return doc;

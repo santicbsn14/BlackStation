@@ -1,4 +1,4 @@
-import { formatearPrecio, type CatalogProduct } from '@blackstation/shared';
+import { fotoCloudinary, formatearPrecio, type CatalogProduct } from '@blackstation/shared';
 import isotipoUrl from '../../../../assets/brand/isotipo.svg';
 import { Badge } from '../../../../components/Badge';
 import { Card } from '../../../../components/Card';
@@ -46,7 +46,12 @@ export function ProductoCard({ producto }: { producto: CatalogProduct }) {
       </div>
       <div className="pub-producto-card__media">
         {producto.fotoUrl ? (
-          <img className="pub-producto-card__foto" src={producto.fotoUrl} alt="" loading="lazy" />
+          <img
+            className="pub-producto-card__foto"
+            src={fotoCloudinary(producto.fotoUrl, 400)}
+            alt=""
+            loading="lazy"
+          />
         ) : (
           <div className="pub-producto-card__foto pub-producto-card__foto--vacia">
             <img src={isotipoUrl} alt="" />

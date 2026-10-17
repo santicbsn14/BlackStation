@@ -29,6 +29,7 @@ export const ERROR_CODES = [
   'ORDERS_DISABLED',
   'CLOSED',
   'TOO_MANY_ATTEMPTS',
+  'TOO_MANY_ORDERS',
   'INTERNAL_ERROR',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -64,6 +65,7 @@ export const ERROR_STATUS = {
   ORDERS_DISABLED: 423,
   CLOSED: 423,
   TOO_MANY_ATTEMPTS: 429,
+  TOO_MANY_ORDERS: 429,
   INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, number>;
 

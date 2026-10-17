@@ -12,10 +12,10 @@ import { z } from 'zod';
 import { AppError } from '../lib/AppError';
 import { CARPETAS_UPLOAD, esFotoPropia, type CarpetaUpload } from '../lib/cloudinary';
 import {
+  cuerpo,
   esBooleano,
   esEntero,
   esObjectId,
-  esObjeto,
   esTextoNoVacio,
   regla,
   textoRequerido,
@@ -23,28 +23,6 @@ import {
 
 // §8.2. Mismas reglas y mensajes que la sección Catálogo de los mocks del front
 // (`texto`, `orden`, `precio`, `booleano`, `camposProducto`, `camposExtra`).
-
-/**
- * Body como objeto (sin body o con algo que no es un objeto cuenta como `{}`). Los obligatorios
- * del create se chequean antes que el resto de las reglas, en orden, como en el mock.
- */
-function cuerpo<T extends z.ZodType<unknown, Record<string, unknown>>>(
-  schema: T,
-  requeridos: [campo: string, mensaje: string][] = [],
-) {
-  return z
-    .unknown()
-    .transform((body, ctx) => {
-      const obj = esObjeto(body) ? body : {};
-      const falta = requeridos.find(([campo]) => obj[campo] === undefined);
-      if (falta) {
-        ctx.addIssue({ code: 'custom', message: falta[1] });
-        return z.NEVER;
-      }
-      return obj;
-    })
-    .pipe(schema);
-}
 
 /** `:id` de la ruta. Mal formado → 404 con el mismo mensaje que uno inexistente. */
 export function idParams(message: string) {
