@@ -638,6 +638,26 @@ describe('topes anti-spam', () => {
     expect((await postOrder(app, pedido({ cliente }))).status).toBe(201);
   });
 
+  it('un 429 deja en el log req.ip y X-Forwarded-For, sin el teléfono', async () => {
+    const cliente = { nombre: 'Ana', telefono: nuevoTelefono() };
+    await postOrder(app, pedido({ cliente }));
+    await postOrder(app, pedido({ cliente }));
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const proxy = nuevaIp();
+    const xff = `203.0.113.7, ${proxy}`;
+    expect((await postOrder(app, pedido({ cliente }), xff)).status).toBe(429);
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const linea = String(warn.mock.calls[0]?.[0]);
+    expect(linea).toContain('TOO_MANY_ORDERS');
+    // Con TRUST_PROXY=1, req.ip es el último salto del header.
+    expect(linea).toContain(`req.ip=${proxy}`);
+    expect(linea).toContain(`x-forwarded-for=${xff}`);
+    expect(linea).not.toContain(cliente.telefono);
+    warn.mockRestore();
+  });
+
   it('los confirmados no cuentan como pendientes', async () => {
     const cliente = { nombre: 'Ana', telefono: nuevoTelefono() };
     await postOrder(app, pedido({ cliente }));

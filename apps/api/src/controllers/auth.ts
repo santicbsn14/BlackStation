@@ -1,5 +1,6 @@
 import type { LoginResponse } from '@blackstation/shared';
 import { AppError } from '../lib/AppError';
+import { logIp } from '../lib/logIp';
 import { loginLimiter } from '../lib/loginLimiter';
 import { validate } from '../middlewares/validate';
 import { login } from '../services/auth';
@@ -11,6 +12,7 @@ export const postLogin = validate({ body: loginBodySchema }, async ({ body }, re
 
   const retryAfter = loginLimiter.check(ip);
   if (retryAfter !== null) {
+    logIp('login TOO_MANY_ATTEMPTS', req);
     res.set('Retry-After', String(retryAfter));
     throw new AppError(
       'TOO_MANY_ATTEMPTS',
@@ -23,6 +25,7 @@ export const postLogin = validate({ body: loginBodySchema }, async ({ body }, re
     response = await login(body.usuario, body.password);
   } catch (err) {
     if (err instanceof AppError && err.code === 'INVALID_CREDENTIALS') {
+      logIp('login fallido', req);
       loginLimiter.registrarFallo(ip);
     }
     throw err;

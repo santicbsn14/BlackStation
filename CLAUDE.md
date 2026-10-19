@@ -10,6 +10,7 @@ panel de comanda en vivo, API y print server local para tickets térmicos.
 | `docs/MODELO_DATOS.md` | **Fuente de verdad** de datos, estados, reglas de negocio y endpoints. |
 | `docs/DESIGN_SYSTEM.md` | Arquitectura CSS, tokens, nombres y reglas de estilos. |
 | `docs/ESTADO.md` | Estado actual y registro de cambios. Se actualiza al terminar cada tarea. |
+| `docs/DEPLOY.md` | Guía de deploy a producción (Render, Atlas, Cloudinary, UptimeRobot). |
 | `docs/briefs/` | Briefs de cada etapa. |
 
 ## Cómo trabajar
@@ -50,6 +51,7 @@ black-station/
 | `npm run build` | Build de `apps/web` (es el que usa Vercel; no suma la api). |
 | `npm run build:api` | Build de `apps/api` con tsup a `apps/api/dist`. |
 | `npm run seed -w @blackstation/api` | Settings + usuario admin (idempotente). `-- --demo` suma el catálogo de prueba. |
+| `npm run seed:prod -w @blackstation/api` | El mismo seed ya compilado (`dist/seed`), sin `tsx` ni `.env`: el de Render. Requiere `build:api`. |
 | `npm run typecheck` | `tsc --noEmit` en todos los workspaces. |
 | `npm run lint` | ESLint en todo el repo. |
 | `npm run test` | Vitest (`packages/shared` y `apps/api`, este con mongodb-memory-server). |
@@ -190,7 +192,7 @@ apps/api/src/
 ├── mappers/          ← documento de Mongo → tipo de shared
 ├── middlewares/      ← errorHandler, notFound, validate, requireAdmin (JWT), requirePrintKey (X-Print-Key)
 ├── jobs/
-├── lib/              ← AppError, clock (now()), texto (normalizarBusqueda, escaparRegex), loginLimiter
+├── lib/              ← AppError, clock (now()), texto (normalizarBusqueda, escaparRegex), loginLimiter, logIp
 └── seed/             ← index.ts (CLI) + runSeed.ts + data/*.json (copias de los mocks)
 ```
 
@@ -214,6 +216,7 @@ apps/api/src/
 | `CORS_ORIGINS` | Orígenes permitidos, separados por comas. |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Imágenes. |
 | `FORCE_OPEN` | Default `false`. Ignora horarios; con `NODE_ENV=production` no arranca. |
+| `TRUST_PROXY` | Entero ≥ 0, default `1`. Proxies delante de la API (`trust proxy` de Express → `req.ip`). |
 | `SEED_ADMIN_USUARIO`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NOMBRE` | Solo el seed (las valida él). |
 
 ## packages/shared

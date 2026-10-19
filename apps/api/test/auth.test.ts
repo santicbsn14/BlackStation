@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
 import { getEnv } from '../src/config/env';
 import { setClock } from '../src/lib/clock';
@@ -133,6 +133,40 @@ describe('límite de intentos', () => {
       expect((await postLogin(ip, {})).status).toBe(400);
     }
     expect((await postLogin(ip, credenciales)).status).toBe(200);
+  });
+});
+
+describe('diagnóstico de IP', () => {
+  it('un login fallido y un 429 dejan req.ip y X-Forwarded-For en el log, sin usuario ni password', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const proxy = nuevaIp();
+    const xff = `203.0.113.7, ${proxy}`;
+    for (let i = 0; i < LOGIN_MAX_FALLOS; i++) {
+      expect((await postLogin(xff, incorrectas)).status).toBe(401);
+    }
+    expect((await postLogin(xff, credenciales)).status).toBe(429);
+
+    expect(warn).toHaveBeenCalledTimes(LOGIN_MAX_FALLOS + 1);
+    const lineas = warn.mock.calls.map((call) => String(call[0]));
+    expect(lineas[0]).toContain('login fallido');
+    expect(lineas.at(-1)).toContain('TOO_MANY_ATTEMPTS');
+    for (const linea of lineas) {
+      // Con TRUST_PROXY=1, req.ip es el último salto del header.
+      expect(linea).toContain(`req.ip=${proxy}`);
+      expect(linea).toContain(`x-forwarded-for=${xff}`);
+      expect(linea).not.toContain(admin.usuario);
+      expect(linea).not.toContain(incorrectas.password);
+      expect(linea).not.toContain(admin.password);
+    }
+    warn.mockRestore();
+  });
+
+  it('un login exitoso o un 400 no loguean', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect((await postLogin(nuevaIp(), credenciales)).status).toBe(200);
+    expect((await postLogin(nuevaIp(), {})).status).toBe(400);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

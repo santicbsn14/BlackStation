@@ -1,3 +1,5 @@
+import { AppError } from '../lib/AppError';
+import { logIp } from '../lib/logIp';
 import { validate } from '../middlewares/validate';
 import {
   cancelPublicOrder,
@@ -20,7 +22,14 @@ import {
 export const createOrderController = validate(
   { body: createOrderBodySchema },
   async ({ body }, req, res) => {
-    res.status(201).json(await createOrder(body, req.ip ?? ''));
+    try {
+      res.status(201).json(await createOrder(body, req.ip ?? ''));
+    } catch (err) {
+      if (err instanceof AppError && err.code === 'TOO_MANY_ORDERS') {
+        logIp('pedido TOO_MANY_ORDERS', req);
+      }
+      throw err;
+    }
   },
 );
 

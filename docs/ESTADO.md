@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a a 05e cerradas; falta el deploy (05f) |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a a 05f cerradas; falta deployar siguiendo [DEPLOY.md](DEPLOY.md) |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -21,6 +21,7 @@
 - [MODELO_DATOS.md](MODELO_DATOS.md) — fuente de verdad del modelo de datos, estados,
   reglas de negocio y endpoints.
 - [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) — arquitectura CSS, tokens y reglas de estilos.
+- [DEPLOY.md](DEPLOY.md) — guía de deploy a producción (Render, Atlas, Cloudinary, UptimeRobot).
 
 ## Cómo correr la Demo 2 (con mocks)
 
@@ -37,6 +38,38 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-19 — Etapa 05f: preparación para producción
+- `apps/api`: env `TRUST_PROXY` (entero ≥ 0, default 1) reemplaza el `trust proxy` fijo; con `-1`
+  o `abc` la API no arranca y lo dice. `lib/logIp.ts`: `console.warn` con `req.ip` y el
+  `X-Forwarded-For` crudo en cada login fallido, en el 429 `TOO_MANY_ATTEMPTS` (`controllers/auth`)
+  y en el 429 `TOO_MANY_ORDERS` (`controllers/orders`, que lo atrapa y lo relanza). Sin usuario,
+  password ni teléfono.
+- Script `seed:prod` (`node dist/seed/index.js`). `.env.example`, CLAUDE.md (variables, comandos,
+  link a DEPLOY.md) y `MODELO_DATOS.md` §7 actualizados.
+- `docs/DEPLOY.md`: guía de las 11 secciones del brief.
+- Verificado a mano desde la raíz, contra un mongodb-memory-server: `build:api` → `seed:prod`
+  (settings + admin) → `start` con `apps/api/src` renombrado (solo `dist/` + `node_modules`):
+  `/health` 200, login fallido con la línea `[ip]` en el log y login correcto. El `dist` solo
+  importa dependencias de runtime (`@blackstation/shared` bundleado, sin `tsx`).
+- Web: `npm run build` deja todo en `apps/web/dist`; `vercel.json` no entra al build (Render usa
+  su propia regla de Rewrite).
+- Tests de la api: 373 (+6): `TRUST_PROXY` en `parseEnv` y en el arranque del proceso, spy de
+  `console.warn` en login fallido + 429 de login y en el 429 de pedidos.
+- typecheck, lint, test, `build` y `build:api` pasan.
+
+**Desvíos y decisiones a revisar**
+- **Dominio con NIC Argentina:** NIC solo permite delegar nameservers, no cargar registros DNS. La
+  guía suma Cloudflare (gratis, a nombre de la clienta, "DNS only") para cargar los registros que
+  pide Render. Cualquier otro proveedor de DNS sirve.
+- `MONGOMS_DISABLE_POSTINSTALL=1` en los dos servicios de Render, como opcional: `npm ci` instala
+  `mongodb-memory-server` (devDependency de los tests) y su postinstall baja el binario de Mongo.
+- En el Static Site la guía aclara **no** setear `NODE_ENV=production` (Vite es devDependency);
+  `NODE_VERSION=24` opcional porque Render lee el `.nvmrc`.
+- La regla para elegir `TRUST_PROXY` en la guía: 1 + IPs a la derecha de la del cliente en
+  `X-Forwarded-For`, y no pasarse (permitiría falsear la IP).
+- El `console.warn` de `[ip]` también sale en la consola de los tests de login/pedidos que no lo
+  espían (ruido, no falla).
 
 ### 2026-10-19 — Etapa 05e: panel, impresión y clientes
 - `MODELO_DATOS.md`: §8.1 (lista y polling con `serverTime = now − 2 s` tomado antes de la query,

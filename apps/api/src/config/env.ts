@@ -23,6 +23,12 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('false')
       .transform((v) => v === 'true'),
+    // Cantidad de proxies delante de la API (Render: 1). Define de dónde sale `req.ip`.
+    TRUST_PROXY: z
+      .string()
+      .regex(/^\d+$/, 'tiene que ser un entero ≥ 0')
+      .default('1')
+      .transform(Number),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.FORCE_OPEN) {

@@ -20,7 +20,7 @@ export type CreateAppOptions = {
 export function createApp(options: CreateAppOptions = {}): Express {
   const app = express();
 
-  app.set('trust proxy', 1);
+  app.set('trust proxy', getEnv().TRUST_PROXY);
   app.disable('x-powered-by');
 
   app.use(cors({ origin: options.corsOrigins ?? getEnv().CORS_ORIGINS }));

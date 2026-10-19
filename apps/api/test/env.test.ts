@@ -61,6 +61,17 @@ describe('parseEnv', () => {
       /FORCE_OPEN/,
     );
   });
+
+  it('TRUST_PROXY: default 1, acepta enteros ≥ 0 y rechaza lo demás', () => {
+    expect(parseEnv(valido).TRUST_PROXY).toBe(1);
+    expect(parseEnv({ ...valido, TRUST_PROXY: '0' }).TRUST_PROXY).toBe(0);
+    expect(parseEnv({ ...valido, TRUST_PROXY: '2' }).TRUST_PROXY).toBe(2);
+    for (const invalido of ['-1', 'abc', '1.5', '', 'true']) {
+      expect(() => parseEnv({ ...valido, TRUST_PROXY: invalido })).toThrow(
+        /TRUST_PROXY: tiene que ser un entero ≥ 0/,
+      );
+    }
+  });
 });
 
 describe('arranque del proceso', () => {
@@ -69,6 +80,12 @@ describe('arranque del proceso', () => {
     const result = arrancar(sinUri);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/MONGODB_URI: falta/);
+  });
+
+  it.each(['-1', 'abc'])('con TRUST_PROXY=%s no arranca y lo dice', (valor) => {
+    const result = arrancar({ ...valido, TRUST_PROXY: valor });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/TRUST_PROXY: tiene que ser un entero ≥ 0/);
   });
 
   it('con FORCE_OPEN=true y NODE_ENV=production no arranca', () => {

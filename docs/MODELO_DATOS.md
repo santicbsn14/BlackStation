@@ -501,7 +501,9 @@ Sin autenticación.
 - Al llegar al tope, 429 `TOO_MANY_ATTEMPTS` con header `Retry-After` (segundos) hasta que se
   cumple la ventana, aunque las credenciales sean correctas.
 - Un login exitoso resetea el contador de esa IP. Un 400 de validación no cuenta como fallo.
-- La IP es `req.ip` (con `trust proxy` en 1: la que agrega el proxy de Render).
+- La IP es `req.ip` (con `trust proxy` = env `TRUST_PROXY`, default 1: la que agrega el proxy de
+  Render). Cada login fallido y cada 429 dejan un `console.warn` con `req.ip` y el
+  `X-Forwarded-For` crudo (sin usuario, password ni teléfono) para verificarlo en producción.
 - El contador vive en memoria: se reinicia con cada deploy. Es aceptado porque Render Starter tiene
   una sola instancia.
 
