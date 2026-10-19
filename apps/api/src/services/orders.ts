@@ -2,8 +2,12 @@ import { randomInt } from 'node:crypto';
 import {
   calcularSubtotal,
   calcularTotal,
+  puedeTransicionar,
+  type AdminOrdersResponse,
   type CreateOrderResponse,
+  type Order,
   type PublicOrder,
+  type ReprintOrderResponse,
 } from '@blackstation/shared';
 import { mongo, type Types } from 'mongoose';
 import { AppError } from '../lib/AppError';
@@ -11,7 +15,7 @@ import { now } from '../lib/clock';
 import { orderLimiter } from '../lib/orderLimiter';
 import { normalizarBusqueda } from '../lib/texto';
 import type { CategoryLean, ExtraLean, ProductLean } from '../mappers/catalog';
-import { toPublicOrder, type OrderLean } from '../mappers/orders';
+import { toAdminOrder, toPublicOrder, type OrderLean } from '../mappers/orders';
 import { CategoryModel, CustomerModel, ExtraModel, OrderModel, ProductModel } from '../models';
 import { esEntero, esObjectId, esObjeto } from '../validators/common';
 import {
@@ -19,9 +23,12 @@ import {
   CODIGO_LARGO,
   telefonoValido,
   validarDatosPedido,
+  type AdminOrdersInput,
   type CreateOrderInput,
+  type UpdateOrderEstadoInput,
 } from '../validators/orders';
 import { nextNumero } from './counters';
+import { sumarAlCustomer } from './customers';
 import { jornadaActual } from './jornada';
 import { findSettings } from './settings';
 import { cumpleAnticipacion, liberarCupo, reservarCupo } from './slots';
@@ -289,7 +296,13 @@ export async function createOrder(
   }
 
   orderLimiter.registrar(ip);
-  await upsertCustomer(datos.nombre, datos.telefono, ahora);
+  // El pedido ya existe: si falla el customer, solo log. Un 500 haría que el cliente reintente y lo
+  // duplique (§5.3).
+  try {
+    await upsertCustomer(datos.nombre, datos.telefono, ahora);
+  } catch (err) {
+    console.error(`No se pudo actualizar el customer del pedido ${order.codigo}:`, err);
+  }
 
   return {
     codigo: order.codigo,
@@ -340,4 +353,125 @@ export async function cancelPublicOrder(codigo: string): Promise<PublicOrder> {
 
   await liberarCupo(order.slotId);
   return toPublicOrder(order);
+}
+
+// Panel (§8.1). Mismas reglas y mensajes que `getAdminOrders`, `updateOrderEstado`, `extendOrder` y
+// `reprintOrder` de los mocks del front. Los cuatro corren antes el vencimiento perezoso (§5.4).
+
+/** Margen hacia atrás de `serverTime`: no perder una escritura que termine durante la query. */
+export const MARGEN_SINCE_MS = 2_000;
+
+const CAMBIO_ESTADO = 'El pedido cambió de estado y ya no admite esa acción.';
+
+/** `GET /api/admin/orders`: por `createdAt`, con polling incremental por `updatedAt > since`. */
+export async function getAdminOrders(query: AdminOrdersInput): Promise<AdminOrdersResponse> {
+  await vencerPendientes();
+  // Antes de la query: lo que se escriba mientras corre queda después de `serverTime`.
+  const ahora = now();
+  const fecha = query.fecha ?? jornadaActual(await findSettings(), ahora).fecha;
+  const docs = await OrderModel.find({
+    fecha,
+    ...(query.estado && { estado: query.estado }),
+    ...(query.since && { updatedAt: { $gt: query.since } }),
+  })
+    .sort({ createdAt: 1, _id: 1 })
+    .lean<OrderLean[]>();
+
+  return {
+    orders: docs.map(toAdminOrder),
+    serverTime: new Date(ahora.getTime() - MARGEN_SINCE_MS).toISOString(),
+  };
+}
+
+async function buscarOrder(id: string): Promise<OrderLean> {
+  const order = await OrderModel.findById(id).lean<OrderLean>();
+  if (!order) throw new AppError('ORDER_NOT_FOUND', NO_ENCONTRADO);
+  return order;
+}
+
+/**
+ * `PATCH /api/admin/orders/:id/estado` (§4). Se aplica con condición sobre el estado leído y los
+ * efectos (cupo, contadores del customer) corren solo si el update matcheó: dos requests a la vez
+ * no los duplican.
+ */
+export async function updateOrderEstado(id: string, input: UpdateOrderEstadoInput): Promise<Order> {
+  await vencerPendientes();
+  const { estado, motivoCancelacion } = input;
+  const actual = await buscarOrder(id);
+  if (!puedeTransicionar(actual.estado, estado, motivoCancelacion, 'panel')) {
+    throw new AppError('INVALID_TRANSITION', CAMBIO_ESTADO);
+  }
+
+  const ahora = now();
+  const cambios =
+    estado === 'confirmado'
+      ? { confirmadoAt: ahora, impresoAt: null } // Entra en la cola de impresión (§5.7).
+      : estado === 'entregado'
+        ? { entregadoAt: ahora }
+        : { canceladoAt: ahora, motivoCancelacion };
+  const order = await OrderModel.findOneAndUpdate(
+    { _id: actual._id, estado: actual.estado },
+    { $set: { estado, ...cambios, updatedAt: ahora } },
+    { returnDocument: 'after', timestamps: false },
+  ).lean<OrderLean>();
+  if (!order) throw new AppError('INVALID_TRANSITION', CAMBIO_ESTADO);
+
+  if (estado === 'entregado') {
+    await sumarAlCustomer(order.cliente.telefono, 'entregados');
+  } else if (estado === 'cancelado') {
+    await liberarCupo(order.slotId);
+    if (motivoCancelacion === 'no_retiro') {
+      await sumarAlCustomer(order.cliente.telefono, 'noShows');
+    }
+  }
+  return toAdminOrder(order);
+}
+
+/**
+ * `PATCH /api/admin/orders/:id/extender` (§5.4): `expiresAt = max(expiresAt, now) +
+ * minutosTransferencia`, atómico con condición `{ estado: 'pendiente', expiresAt: { $ne: null } }`.
+ */
+export async function extendOrder(id: string): Promise<Order> {
+  // Un pendiente ya vencido pasa antes a cancelado: extenderlo da 409 `INVALID_TRANSITION`.
+  await vencerPendientes();
+  const actual = await buscarOrder(id);
+  const noPendiente = () => new AppError('INVALID_TRANSITION', 'El pedido ya no está pendiente.');
+  if (actual.estado !== 'pendiente') throw noPendiente();
+  if (!actual.expiresAt) {
+    throw new AppError('NOT_EXTENDABLE', 'El pedido se paga al retirar: no tiene plazo.');
+  }
+
+  const { minutosTransferencia } = await findSettings();
+  const ahora = now();
+  const desde = Math.max(actual.expiresAt.getTime(), ahora.getTime());
+  const order = await OrderModel.findOneAndUpdate(
+    { _id: actual._id, estado: 'pendiente', expiresAt: { $ne: null } },
+    {
+      $set: {
+        expiresAt: new Date(desde + minutosTransferencia * 60_000),
+        updatedAt: ahora,
+      },
+    },
+    { returnDocument: 'after', timestamps: false },
+  ).lean<OrderLean>();
+  if (!order) throw noPendiente();
+  return toAdminOrder(order);
+}
+
+/** `POST /api/admin/orders/:id/reprint` (§5.7): vuelve `impresoAt` a `null`, solo si `confirmado`. */
+export async function reprintOrder(id: string): Promise<ReprintOrderResponse> {
+  await vencerPendientes();
+  const ahora = now();
+  const order = await OrderModel.findOneAndUpdate(
+    { _id: id, estado: 'confirmado' },
+    { $set: { impresoAt: null, updatedAt: ahora } },
+    { projection: { _id: 1 }, timestamps: false },
+  ).lean();
+  if (!order) {
+    if (await OrderModel.exists({ _id: id })) {
+      throw new AppError('NOT_CONFIRMED', 'Solo se reimprimen pedidos confirmados.');
+    }
+    throw new AppError('ORDER_NOT_FOUND', NO_ENCONTRADO);
+  }
+  return { ok: true };
 }

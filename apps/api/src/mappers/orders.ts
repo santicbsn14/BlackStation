@@ -1,4 +1,4 @@
-import type { OrderItem, PublicOrder } from '@blackstation/shared';
+import type { Order, OrderItem, PublicOrder } from '@blackstation/shared';
 import type { Types } from 'mongoose';
 import type { OrderDoc } from '../models';
 
@@ -39,6 +39,32 @@ export function toPublicOrder(doc: OrderLean): PublicOrder {
     motivoCancelacion: doc.motivoCancelacion ?? null,
     total: doc.total,
     expiresAt: iso(doc.expiresAt),
+    createdAt: doc.createdAt.toISOString(),
+    updatedAt: doc.updatedAt.toISOString(),
+  };
+}
+
+/** Panel (§8.1) y print server (§9): el `Order` completo. */
+export function toAdminOrder(doc: OrderLean): Order {
+  return {
+    _id: doc._id.toString(),
+    codigo: doc.codigo,
+    numero: doc.numero,
+    fecha: doc.fecha,
+    cliente: { nombre: doc.cliente.nombre, telefono: doc.cliente.telefono },
+    items: toItems(doc),
+    aclaracion: doc.aclaracion ?? null,
+    slotId: doc.slotId.toString(),
+    horaRetiro: doc.horaRetiro,
+    metodoPago: doc.metodoPago,
+    estado: doc.estado,
+    expiresAt: iso(doc.expiresAt),
+    total: doc.total,
+    confirmadoAt: iso(doc.confirmadoAt),
+    entregadoAt: iso(doc.entregadoAt),
+    canceladoAt: iso(doc.canceladoAt),
+    motivoCancelacion: doc.motivoCancelacion ?? null,
+    impresoAt: iso(doc.impresoAt),
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };

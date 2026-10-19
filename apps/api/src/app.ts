@@ -6,6 +6,7 @@ import { notFound } from './middlewares/notFound';
 import { adminRouter } from './routes/admin';
 import { authRouter } from './routes/auth';
 import { healthRouter } from './routes/health';
+import { printRouter } from './routes/print';
 import { publicRouter } from './routes/public';
 
 export type CreateAppOptions = {
@@ -28,6 +29,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use(healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/print', printRouter);
   app.use('/api', publicRouter);
   options.extraRoutes?.(app);
 

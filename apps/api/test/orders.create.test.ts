@@ -579,6 +579,19 @@ describe('falla después de reservar', () => {
     expect(siguiente.body.numero).toBe(3);
   });
 
+  it('upsert del customer que falla → 201, el pedido existe y el error va al log', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(CustomerModel, 'updateOne').mockRejectedValueOnce(new Error('falla forzada'));
+    const telefono = nuevoTelefono();
+    const res = await postOrder(app, pedido({ cliente: { nombre: 'Ana', telefono } }));
+
+    expect(res.status).toBe(201);
+    expect(await OrderModel.exists({ codigo: res.body.codigo })).toBeTruthy();
+    expect(await ocupados()).toBe(1);
+    expect(await CustomerModel.countDocuments({ telefono })).toBe(0);
+    expect(log).toHaveBeenCalledOnce();
+  });
+
   it('codigo repetido: se reintenta con otro', async () => {
     // Las primeras 8 llamadas arman `AAAAAAAA`; el segundo pedido choca una vez y reintenta.
     randomIntMock.mockImplementation(() => 0);

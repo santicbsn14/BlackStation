@@ -11,7 +11,7 @@
 | 03 | App pública: catálogo, carrito, checkout y seguimiento del pedido | ✅ Cerrada — [Demo 1](https://black-station-web.vercel.app/), diseño aprobado por la clienta |
 | 03c | Repaso antes de enviar + cancelación por el cliente | ✅ Cerrada |
 | 04 | Panel: login, comanda, catálogo, franjas, clientes y ajustes (+ services/mocks admin) | ✅ Cerrada — Demo 2 aprobada por la clienta con el ajuste de 04e |
-| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a, 05b, 05c y 05d cerradas |
+| 05 | API (`apps/api`): Express por capas, MongoDB, auth y job de vencimiento | En curso — 05a a 05e cerradas; falta el deploy (05f) |
 | 06 | Reglas de reputación de clientes | Pendiente |
 | 07 | Print server (`apps/print-server`): ESC/POS + PM2 | Pendiente |
 | 08 | Pulido y salida a producción (marca definitiva, settings reales) | Pendiente |
@@ -37,6 +37,46 @@
 En Vercel las mismas variables van en el dashboard.
 
 ## Registro de cambios
+
+### 2026-10-19 — Etapa 05e: panel, impresión y clientes
+- `MODELO_DATOS.md`: §8.1 (lista y polling con `serverTime = now − 2 s` tomado antes de la query,
+  validaciones y mensajes, transiciones con condición sobre el estado leído y efectos solo si el
+  update matcheó, reprint atómico), §8.5 (búsqueda, orden con `null` al final, validaciones del
+  `PATCH`, 404 por `:telefono`), §9 (cola solo de la jornada actual, `ack` idempotente y 409 si ya no
+  está confirmado), §5.3 (falla del upsert del customer → log y 201), §5.4 (vencimiento perezoso en
+  `/api/admin/orders`) y §10 (`NOT_CONFIRMED` también para el `ack`).
+- `apps/api`: `GET /api/admin/orders`, `PATCH .../estado`, `PATCH .../extender`,
+  `POST .../reprint`, `GET`/`PATCH /api/admin/customers`, `GET /api/print/queue` y
+  `POST /api/print/:id/ack` (router con `requirePrintKey`). `services/{customers,print}`, funciones
+  nuevas en `services/orders`, `mappers/customers` (`toCustomer`) y `toAdminOrder`,
+  `validators/customers` y los validators del panel en `validators/orders`, controllers y routes.
+- `createOrder`: si el upsert del customer falla después del insert, `console.error` y 201.
+- Con esto están todos los endpoints de §6–9.
+- Tests de la api: 367 (+76): lista, filtros, `serverTime`, `since` con un pedido confirmado entre
+  consultas, cada transición con sus efectos, las inválidas, concurrencia (confirmar + cancelar a la
+  vez con una barrera que obliga a las dos a leer `pendiente`; dos `no_retiro`; dos entregar),
+  vencido, extender, reprint, cola (ayer no entra, orden por `confirmadoAt`), `ack` (idempotente,
+  cancelado, 404), clave del print server, búsqueda de clientes (tildes, teléfono, `.*`, tope y orden),
+  `PATCH` de clientes y la falla forzada del upsert del customer.
+- typecheck, lint, test, `build` y `build:api` pasan.
+
+**Desvíos y decisiones a revisar**
+- **Motivo `vencido`/`cliente` desde el panel → 409** (como pide el brief), no 400 como el mock: el
+  body acepta cualquier motivo de §3.4 y `puedeTransicionar` lo rechaza. Sin motivo o con uno que no
+  existe → 400 con el mensaje del mock. El mock quedó sin tocar (cambios de front fuera de alcance).
+- Mensaje nuevo, sin equivalente en el mock: `El pedido ya no está confirmado.` (`ack` sobre un
+  pedido que no está `confirmado`).
+- `ack` también actualiza `updatedAt`, para que el panel vea "impreso" por polling. Si justo lo
+  reimprimieron entre el update y la relectura, reintenta.
+- Extender usa el `expiresAt` leído para calcular el nuevo: dos extensiones simultáneas pueden contar
+  como una (aceptado; el update sigue condicionado a `pendiente`, como dice §8.1).
+- `reprint` ahora corre el vencimiento perezoso (el mock no), como pide el brief para los cuatro.
+- Transición sobre un pedido cuyo customer no existe: cambia el estado y no crea el customer, igual
+  que `sumarAlCustomer` del mock.
+- **Sin verificar (manual del brief):** el flujo en el navegador con `VITE_USE_MOCKS=false` (pedido
+  desde `/` que aparece en la comanda con sonido, acciones de la comanda, `/pedido/:codigo` y
+  `/admin/clientes`). No se levantó la API contra Atlas en esta sesión; todo lo de arriba está
+  cubierto por supertest.
 
 ### 2026-10-17 — Etapa 05d: franjas y pedidos
 - `MODELO_DATOS.md`: §5.3 (topes anti-spam por teléfono e IP, generación del `codigo` con

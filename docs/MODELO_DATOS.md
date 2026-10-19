@@ -413,6 +413,9 @@ Luego el backend arma el snapshot y el `total` con precios de la DB, asigna `cod
   genera otro y se reintenta el insert, hasta 5 veces.
 - **Falla después de reservar:** si algo falla entre la reserva y el insert del pedido, se libera el
   cupo (§3.5 paso 3). El `numero` ya tomado queda salteado (§3.9).
+- **Falla del customer:** si el upsert del customer falla **después** de crear el pedido, el error va
+  al log y la respuesta sigue siendo `201`. El pedido ya existe: un 500 haría que el cliente reintente
+  y lo duplique. Ese pedido queda sin sumar en `pedidosTotal` (aceptado).
 
 ### 5.4 Transferencia y vencimiento
 
@@ -423,7 +426,8 @@ Luego el backend arma el snapshot y el `total` con precios de la DB, asigna `cod
   `cancelado` con motivo `vencido`, y se libera su cupo.
 - **Vencimiento perezoso:** lo mismo (`vencerPendientes()`) corre además al inicio de
   `GET /api/slots`, `POST /api/orders`, `GET /api/orders/:codigo`,
-  `POST /api/orders/:codigo/cancelar` y `GET`/`PATCH /api/admin/slots`. Así ningún pedido vencido
+  `POST /api/orders/:codigo/cancelar`, `GET`/`PATCH /api/admin/slots` y los cuatro endpoints de
+  `/api/admin/orders` (§8.1). Así ningún pedido vencido
   se ve ni se opera como `pendiente` mientras el job no pasa.
 - Cada pedido se vence con `findOneAndUpdate({ _id, estado: 'pendiente', expiresAt: { $lte: now } })`
   y el cupo se libera solo si esa actualización matcheó: si el job y una request corren a la vez, el
@@ -519,10 +523,45 @@ Todos requieren `Authorization: Bearer <token>` (401 sin token o vencido).
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/admin/orders` | Query: `fecha?` (default jornada actual), `estado?`, `since?` (ISO; devuelve solo `updatedAt > since`) | `{ orders: [order completo], serverTime }`. El panel usa `serverTime` como próximo `since`. |
-| `PATCH /api/admin/orders/:id/estado` | `{ estado, motivoCancelacion? }` (motivo obligatorio si `estado = cancelado`: `manual` o `no_retiro`) | Order actualizada. 409 si la transición no es válida. |
+| `GET /api/admin/orders` | Query: `fecha?` (default jornada actual), `estado?`, `since?` (ISO; devuelve solo `updatedAt > since`) | `{ orders: [order completo], serverTime }`. El panel usa `serverTime` como próximo `since`. Ver **Lista y polling**. |
+| `PATCH /api/admin/orders/:id/estado` | `{ estado, motivoCancelacion? }` (motivo obligatorio si `estado = cancelado`: `manual` o `no_retiro`) | Order actualizada. 409 si la transición no es válida. Ver **Transiciones**. |
 | `PATCH /api/admin/orders/:id/extender` | — (sin body) | Order actualizada. `expiresAt = max(expiresAt, now) + minutosTransferencia`. Se aplica atómico con condición `{ estado: 'pendiente', expiresAt: { $ne: null } }` para no pisarse con el job de vencimiento. Sin límite de extensiones. Errores: 404 `ORDER_NOT_FOUND`; 409 `INVALID_TRANSITION` si no está `pendiente` (incluye el que ya venció); 409 `NOT_EXTENDABLE` si no tiene `expiresAt` (paga al retirar). |
-| `POST /api/admin/orders/:id/reprint` | — | `{ ok: true }`. Vuelve `impresoAt` a `null`. 409 si no está `confirmado`. |
+| `POST /api/admin/orders/:id/reprint` | — | `{ ok: true }`. Vuelve `impresoAt` a `null`, con condición atómica `estado: 'confirmado'`. Si no matchea: 409 `NOT_CONFIRMED` `Solo se reimprimen pedidos confirmados.`. |
+
+Los cuatro endpoints corren el vencimiento perezoso (§5.4) antes de responder. `:id` inexistente o
+mal formado: 404 `ORDER_NOT_FOUND` `No encontramos ese pedido.`. Los mensajes son los de los mocks.
+
+**Lista y polling** (`GET /api/admin/orders`)
+
+- Sin `fecha`, la jornada actual (§5.1; con `FORCE_OPEN`, la que sale de "ahora").
+- Orden por `createdAt` ascendente.
+- `serverTime` = `now()` tomado **antes** de la query, menos 2 s de margen. Así no se pierde una
+  escritura que se confirme mientras corre la consulta. Traer de nuevo algo que ya estaba no molesta:
+  el panel mergea por `_id`.
+- Validación (400 `VALIDATION_ERROR`): `fecha` que no es `YYYY-MM-DD` → `La fecha no es válida.`;
+  `estado` fuera del enum → `El estado no es válido.`; `since` que no es una fecha →
+  `` `since` no es una fecha válida. ``.
+
+**Transiciones** (`PATCH /api/admin/orders/:id/estado`)
+
+- Body (400 `VALIDATION_ERROR`): `estado` fuera del enum → `El estado no es válido.`. Con
+  `estado = cancelado`, `motivoCancelacion` tiene que ser uno de los motivos de §3.4; si falta o no es
+  ninguno → `` Para cancelar hace falta el motivo: `manual` o `no_retiro`. ``. Con otro `estado`, el
+  motivo se ignora.
+- Primero se valida con `puedeTransicionar(actual, nuevo, motivo, 'panel')`: cualquier transición que
+  no esté en §4 para el panel (incluido cancelar con `vencido` o `cliente`) → 409
+  `INVALID_TRANSITION` `El pedido cambió de estado y ya no admite esa acción.`.
+- Se aplica con `findOneAndUpdate` condicionado al **estado leído**. Si no matchea porque cambió en el
+  medio (otra request, el job, el cliente): 409 `INVALID_TRANSITION` con el mismo mensaje.
+- Los efectos de §4 corren **solo si el update matcheó** (una sola vez aunque lleguen dos requests):
+  - `confirmado` → `confirmadoAt = now`, `impresoAt = null`.
+  - `entregado` → `entregadoAt = now` y `customers.entregados++`.
+  - `cancelado` → `canceladoAt = now`, `motivoCancelacion` y se libera el cupo; si el motivo es
+    `no_retiro`, además `customers.noShows++`.
+- Si no existe el customer del teléfono, los contadores no se tocan (no se crea).
+
+**Extender** (`PATCH /api/admin/orders/:id/extender`): `El pedido ya no está pendiente.`
+(`INVALID_TRANSITION`) y `El pedido se paga al retirar: no tiene plazo.` (`NOT_EXTENDABLE`).
 
 ### 8.2 Catálogo
 
@@ -657,6 +696,19 @@ Cualquier otro campo del body (`_id`, `updatedAt`, etc.) se ignora.
 | `GET /api/admin/customers` | Query: `q?` | `{ customers: [customer] }`, orden `ultimoPedidoAt` desc, tope 50. Si `q` tiene solo dígitos: `telefono` contiene `q`. Si no: `nombre` contiene `q`, sin distinguir mayúsculas ni tildes (regex sobre `nombreBusqueda` con `q` normalizado igual y escapado). `q` con menos de 2 caracteres → 400 `VALIDATION_ERROR`. Sin `q`: los 50 más recientes. |
 | `PATCH /api/admin/customers/:telefono` | `{ estado?, estadoManual? }` | Customer actualizado. Cambiar `estado` desde el panel pone `estadoManual = true`, salvo que se envíe explícitamente `estadoManual: false`. 404 si no existe. |
 
+- `q` se usa con trim. Vacío equivale a no mandarlo. Con 1 carácter: 400 `VALIDATION_ERROR`
+  `La búsqueda necesita al menos 2 caracteres.`.
+- Solo dígitos → `telefono` contiene `q`. Si no → regex sobre `nombreBusqueda` con `q` pasado por
+  `normalizarBusqueda` + `escaparRegex`: `.*` se busca como texto literal.
+- Orden por `ultimoPedidoAt` desc (los `null` al final) y tope de 50.
+- `nombreBusqueda` nunca sale en la respuesta.
+- `PATCH`, validación (400 `VALIDATION_ERROR`), en este orden: sin `estado` ni `estadoManual` →
+  `No hay cambios para aplicar.`; `estado` fuera del enum → `El estado no es válido.`;
+  `estadoManual` no boolean → `` `estadoManual` tiene que ser true o false. ``.
+- `:telefono` inexistente o que no cumple `TELEFONO_REGEX`: 404 `CUSTOMER_NOT_FOUND`
+  `No encontramos ese cliente.`.
+- Setea `updatedAt` con la hora de la API. No toca `nombre` ni los contadores.
+
 ---
 
 ## 9. Endpoints del print server
@@ -666,8 +718,18 @@ coincide). La comparación es en tiempo constante: sha256 de ambos lados + `timi
 
 | Método y ruta | Request | Response |
 |---|---|---|
-| `GET /api/print/queue` | — | `{ orders: [order completo] }`: pedidos `confirmado` con `impresoAt = null`, ordenados por `confirmadoAt`. |
+| `GET /api/print/queue` | — | `{ orders: [order completo] }`: pedidos de la **jornada actual** en `confirmado` con `impresoAt = null`, ordenados por `confirmadoAt`. |
 | `POST /api/print/:id/ack` | — | `{ ok: true, impresoAt }`. Setea `impresoAt = now`. |
+
+- La cola solo trae la jornada actual (§5.1, respeta `FORCE_OPEN`). Los pedidos de jornadas
+  anteriores no se imprimen solos; si hace falta, se reimprimen desde el panel.
+- `ack`:
+  - Pedido inexistente o `:id` mal formado → 404 `ORDER_NOT_FOUND` `No encontramos ese pedido.`.
+  - Pedido `confirmado` sin `impresoAt` → setea `impresoAt = now` (y `updatedAt`, así el panel lo ve
+    por polling), con condición atómica `{ estado: 'confirmado', impresoAt: null }`.
+  - Es idempotente: si el pedido `confirmado` ya tenía `impresoAt`, devuelve el que tiene.
+  - Pedido en otro estado (por ejemplo, cancelado mientras se imprimía) → 409 `NOT_CONFIRMED`
+    `El pedido ya no está confirmado.`.
 
 ---
 
@@ -718,7 +780,7 @@ Formato único para toda respuesta de error:
 | 409 | `SLOT_FULL` | Franja sin cupo. |
 | 409 | `SLOT_CLOSED` | Franja cerrada manualmente. |
 | 409 | `INVALID_TRANSITION` | Transición de estado no permitida. |
-| 409 | `NOT_CONFIRMED` | Reimpresión de un pedido que no está `confirmado`. |
+| 409 | `NOT_CONFIRMED` | Reimpresión o `ack` de impresión de un pedido que no está `confirmado`. |
 | 409 | `NOT_EXTENDABLE` | Extender el plazo de un pedido sin `expiresAt` (paga al retirar). |
 | 423 | `ORDERS_DISABLED` | `pedidosHabilitados = false`. |
 | 423 | `CLOSED` | Día inactivo o fuera del horario de atención. |
